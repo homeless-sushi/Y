@@ -38,32 +38,15 @@ int main(int argc, char *argv[])
 
     margot::init();
     margot::nbody::context().manager.wait_for_knowledge(10);
-
-    unsigned int deviceId = 0;
-    unsigned int gpuBlockSizeExp = 0;
     
-    Knobs::DEVICE device;
-    Knobs::GpuKnobs::BLOCK_SIZE gpuBlockSize;
+    Knobs::DEVICE device = Knobs::DEVICE::CPU;
 
     unsigned int cpuThreads = 1;
     unsigned int precision = 1;
 
-    CastKnobs(
-        deviceId,
-        gpuBlockSizeExp,
-        device,
-        gpuBlockSize
-    );
-
     while(margot::nbody::context().manager.in_design_space_exploration()){
 
-        if(margot::nbody::update(cpuThreads, deviceId, gpuBlockSizeExp, precision)){
-            CastKnobs(
-                deviceId,
-                gpuBlockSizeExp,
-                device,
-                gpuBlockSize
-            );
+        if(margot::nbody::update(cpuThreads, precision)){
             margot::nbody::context().manager.configuration_applied();
         }
 
@@ -84,7 +67,7 @@ int main(int argc, char *argv[])
 
         std::unique_ptr<Nbody::Nbody> nbody( 
             device == Knobs::DEVICE::GPU ?
-            static_cast<Nbody::Nbody*>(new NbodyCuda::NbodyCuda(bodies, actualTimeStep, gpuBlockSize)) :
+            static_cast<Nbody::Nbody*>(new NbodyCuda::NbodyCuda(bodies, actualTimeStep, 64)) :
             static_cast<Nbody::Nbody*>(new NbodyCpu::NbodyCpu(bodies, actualTimeStep, cpuThreads))
         );
         float actualSimulationTime;
@@ -119,17 +102,4 @@ po::options_description SetupOptions()
     ;
 
     return desc;
-}
-
-void CastKnobs(
-    unsigned int deviceId,
-    unsigned int gpuBlockSizeExp,
-    Knobs::DEVICE& device,
-    Knobs::GpuKnobs::BLOCK_SIZE& gpuBlockSize
-)
-{
-    device = static_cast<Knobs::DEVICE>(deviceId);
-    gpuBlockSize = static_cast<Knobs::GpuKnobs::BLOCK_SIZE>(
-        Knobs::GpuKnobs::BLOCK_32 << gpuBlockSizeExp
-    );
 }

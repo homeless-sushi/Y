@@ -20,19 +20,9 @@
 			"knobs":
 			[
 				{
-					"name": "DEVICE_TYPE",
-					"type": "unsigned int",
-					"range": [ 0, 2, 1 ]
-				},
-                {
 					"name": "CPU_THREADS",
 					"type": "unsigned int",
-					"range": [ 1, 21, 1 ]
-				},
-				{
-					"name": "GPU_BLOCK_EXP",
-					"type": "unsigned int",
-					"range": [0, 5, 1]
+					"range": [1, 5, 1]
 				},
 				{
 					"name": "PRECISION",
@@ -50,9 +40,9 @@
 				"broker_ca": "",
 				"client_cert": "",
 				"client_key": "",
-        		"number_configurations_per_iteration": 20000,
+        		"number_configurations_per_iteration": 400,
         		"number_observations_per_configuration": 1,
-        		"max_number_iteration": 10,
+        		"max_number_iteration": 2,
 				"clustering_plugin": "cluster",
 				"clustering_parameters":
 				[

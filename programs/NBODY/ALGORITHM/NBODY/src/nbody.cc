@@ -42,7 +42,7 @@ int main(int argc, char *argv[])
         precision
     );
 
-    NbodyCuda::NbodyCuda nbody(bodies, actualTimeStep, 64);
+    NbodyCpu::NbodyCpu nbody(bodies, actualTimeStep, 4);
     float actualSimulationTime;
     for(actualSimulationTime = 0.f; actualSimulationTime < approximateSimulationTime; actualSimulationTime+=actualTimeStep){
         nbody.run();
