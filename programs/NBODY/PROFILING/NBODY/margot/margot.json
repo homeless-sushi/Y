@@ -23,8 +23,8 @@
 					"name": "CPU_THREADS",
 					"type": "unsigned int",
 					"range": [1, 5, 1]
-				},
-				{
+                },
+                {
 					"name": "PRECISION",
 					"type": "unsigned int",
 					"range": [1, 101, 1]
@@ -40,6 +40,7 @@
 				"broker_ca": "",
 				"client_cert": "",
 				"client_key": "",
+
         		"number_configurations_per_iteration": 400,
         		"number_observations_per_configuration": 1,
         		"max_number_iteration": 2,
