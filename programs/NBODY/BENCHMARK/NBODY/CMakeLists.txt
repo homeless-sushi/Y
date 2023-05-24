@@ -1,5 +1,7 @@
 # When the project is built, build this library
-add_executable(NBODY_Benchmark)
+add_executable(NBODY_Benchmark
+    "src/nbody.cc"
+)
 
 # Rename the executable file
 set_target_properties(NBODY_Benchmark 
@@ -7,10 +9,10 @@ set_target_properties(NBODY_Benchmark
         OUTPUT_NAME "NBODY")
 
 # Add sources to the target
-target_sources(NBODY_Benchmark
-    PRIVATE
-        "src/nbody.cc"
-)
+#target_sources(NBODY_Benchmark
+#    PRIVATE
+#        "src/nbody.cc"
+#)
 
 # Add to the include path of the target
 target_include_directories(NBODY_Benchmark 
