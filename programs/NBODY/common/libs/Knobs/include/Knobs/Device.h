@@ -1,6 +1,8 @@
 #ifndef NBODY_KNOBS_DEVICE_H
 #define NBODY_KNOBS_DEVICE_H
 
+#include <string>
+
 namespace Knobs 
 {
     enum DEVICE 
@@ -8,6 +10,8 @@ namespace Knobs
         CPU,
         GPU
     };
+
+    std::string DeviceToString(DEVICE device);
 
     struct DeviceKnobs
     {   
