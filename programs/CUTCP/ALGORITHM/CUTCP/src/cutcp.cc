@@ -9,6 +9,8 @@
 #include <Cutcp/Lattice.h>
 #include <Cutcp/ReadWrite.h>
 
+#include <Knobs/Precision.h>
+
 #include <boost/program_options.hpp>
 
 namespace po = boost::program_options;
@@ -26,11 +28,6 @@ int main(int argc, char *argv[])
         return 0;
     }
 
-    float spacing = 0.5;
-    float padding = 0.5;
-    float cutoff = 12.;		
-    float exclusionCutoff = 1.;
-
     std::string inputFileURL(vm["input-file"].as<std::string>());
     std::vector<Atom::Atom> atoms = Atom::ReadAtomFile(inputFileURL);
     
@@ -41,13 +38,18 @@ int main(int argc, char *argv[])
     std::cout << "\t" << "minimum: " << minCoords.x << " " << minCoords.y << " " << minCoords.z << std::endl;
     std::cout << "\t" << "maximum: " << maxCoords.x << " " << maxCoords.y << " " << maxCoords.z << std::endl;
 
+    float padding = 0.5;
     Vector::Vec3 paddingVec(padding);
     minCoords = minCoords - paddingVec;
     maxCoords = maxCoords + paddingVec;
     std::cout << "padding domain by " << padding << " Angstroms:" << std::endl;
     std::cout << "domain lenghts are " << maxCoords.x-minCoords.x << " by " << maxCoords.y-minCoords.y << " by " << maxCoords.z-minCoords.z << std::endl;
 
+    float spacing = 0.5;
     Lattice::Lattice lattice(minCoords, maxCoords, spacing);
+
+    float cutoff = Knobs::GetCutoff(minCoords, maxCoords, spacing, vm["precision"].as<unsigned int>());
+    float exclusionCutoff = 1.;
     CutcpCpu::CutcpCpu cutcp(
         lattice,
         atoms,
@@ -71,6 +73,7 @@ po::options_description SetupOptions()
     ("help", "Display help message")
     ("input-file,I", po::value<std::string>(), "input atoms file")
     ("output-file,O", po::value<std::string>(), "output lattice result file")
+    ("precision,P", po::value<unsigned int>()->default_value(100), "precision in range 0-100")
     ;
 
     return desc;

@@ -23,6 +23,7 @@ target_link_libraries(CUTCP_Algorithm
     PUBLIC
         CUTCP_Atom_LIB
         CUTCP_Cutcp_LIB
+        CUTCP_Knobs_LIB
 )
 
 # Add Boost Libraries
