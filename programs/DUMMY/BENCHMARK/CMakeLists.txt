@@ -39,5 +39,5 @@ set(PROJECT_COMMON_DIR "../../../common")
 add_subdirectory(${PROJECT_COMMON_DIR} "common/project")
 
 # Add runtime manager subdirectories and dependencies
-set(RTRM_COMM_DIR "/home/vivian/Documents/Thesis/Thesis-Communication")
+set(RTRM_COMM_DIR "/home/miele/Vivian/Thesis/Thesis-Communication")
 add_subdirectory(${RTRM_COMM_DIR} "rtrm")

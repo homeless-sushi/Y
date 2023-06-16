@@ -1,5 +1,7 @@
 # When the project is built, build this library
-add_executable(DUMMY_Benchmark)
+add_executable(DUMMY_Benchmark
+    "src/dummy.cc"
+)
 
 # Rename the executable file
 set_target_properties(DUMMY_Benchmark 
@@ -7,10 +9,10 @@ set_target_properties(DUMMY_Benchmark
         OUTPUT_NAME "DUMMY")
 
 # Add sources to the target
-target_sources(NBODY_Benchmark
-    PRIVATE
-        "src/dummy.cc"
-)
+#target_sources(NBODY_Benchmark
+#    PRIVATE
+#        "src/dummy.cc"
+#)
 
 # Add to the include path of the target
 target_include_directories(DUMMY_Benchmark 
