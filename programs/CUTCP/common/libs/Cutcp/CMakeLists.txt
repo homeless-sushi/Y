@@ -5,6 +5,7 @@ add_library(CUTCP_Cutcp_LIB)
 target_sources(CUTCP_Cutcp_LIB
     PRIVATE
         "src/CutcpCpu.cc"
+        "src/CutcpCuda.cu"
         "src/ReadWrite.cc"
 )
 
