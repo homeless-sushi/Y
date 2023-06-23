@@ -18,6 +18,7 @@ namespace Lattice
             int ny_; // Number of lattice points in the Y axis
             int nz_; // Number of lattice points in the Z axis
             Vector::Vec3 min_; // Lowest corner of lattice
+            Vector::Vec3 max_; // Highest corner of lattice
             float spacing_; // Spacing between potential points
 
         public:
@@ -26,6 +27,7 @@ namespace Lattice
             Lattice() = default;
             Lattice(Vector::Vec3 minCoords, Vector::Vec3 maxCoords, float spacing) :
                 min_{minCoords},
+                max_{maxCoords},
                 spacing_{spacing},
                 nx_{(int) floor((maxCoords.x-minCoords.x)/spacing) + 1},
                 ny_{(int) floor((maxCoords.y-minCoords.y)/spacing) + 1},
@@ -37,6 +39,7 @@ namespace Lattice
             int ny() const { return ny_; }
             int nz() const { return nz_; }
             const Vector::Vec3& min() const { return min_; }
+            const Vector::Vec3& max() const { return max_; }
             float spacing() const { return spacing_; }
     };
 }
