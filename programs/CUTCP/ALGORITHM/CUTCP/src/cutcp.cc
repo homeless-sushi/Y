@@ -1,4 +1,5 @@
 #include <iostream>
+#include <memory>
 #include <string>
 
 #include <Atom/Atom.h>
@@ -6,9 +7,11 @@
 #include <Atom/Utils.h>
 
 #include <Cutcp/CutcpCpu.h>
+#include <Cutcp/CutcpCuda.h>
 #include <Cutcp/Lattice.h>
 #include <Cutcp/ReadWrite.h>
 
+#include <Knobs/Device.h>
 #include <Knobs/Precision.h>
 
 #include <boost/program_options.hpp>
@@ -50,16 +53,18 @@ int main(int argc, char *argv[])
 
     float cutoff = Knobs::GetCutoff(minCoords, maxCoords, spacing, vm["precision"].as<unsigned int>());
     float exclusionCutoff = 1.;
-    CutcpCpu::CutcpCpu cutcp(
-        lattice,
-        atoms,
-        cutoff,
-        exclusionCutoff,
-        16
-    );
-    cutcp.run();
-    lattice = cutcp.getResult();
-    
+    std::cout << "potential cutoff is " << cutoff << std::endl;
+    std::cout << "exclusion cutoff is " << exclusionCutoff << std::endl;
+
+    Knobs::DEVICE device = Knobs::DEVICE::GPU;
+    std::unique_ptr<Cutcp::Cutcp> cutcp( 
+            device == Knobs::DEVICE::GPU ?
+            static_cast<Cutcp::Cutcp*>(new CutcpCuda::CutcpCuda(lattice, atoms, cutoff, exclusionCutoff, 64)) :
+            static_cast<Cutcp::Cutcp*>(new CutcpCpu::CutcpCpu(lattice, atoms, cutoff, exclusionCutoff, 16))
+        );
+    cutcp->run();
+    lattice = cutcp->getResult();
+
     if(vm.count("output-file")){
         Cutcp::WriteLattice(vm["output-file"].as<std::string>(), lattice);
     }
