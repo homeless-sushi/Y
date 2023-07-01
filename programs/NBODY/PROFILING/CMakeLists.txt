@@ -21,6 +21,7 @@ endif()
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fopenmp")
 
 # Find Boost Libraries
+set(BOOST_ROOT $ENV{boost_DIR})
 find_package(Boost REQUIRED
     COMPONENTS program_options)
 # When using Boost 1.73
@@ -28,6 +29,8 @@ find_package(Boost REQUIRED
 ##    COMPONENTS ALLL)
 
 # Find Margot
+set(eclipse-paho-mqtt-c_DIR $ENV{paho_DIR})
+set(margot_heel_generator_DIR $ENV{margot_heel_generator_DIR})
 find_package (margot_heel_generator REQUIRED)
 
 # Run the CMake of these subdirectories
