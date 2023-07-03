@@ -48,16 +48,11 @@ namespace CutcpCpu
         const float inverseCutSqrd = 1.f / cutSqrd;
         const float inverseSpacing = 1.f / spacing;
 
-        // find min and max extent 
-        Vector::Vec3 nextMinCoords;
-        Vector::Vec3 nextMaxCoords;
-        Atom::GetAtomBounds(atoms, nextMinCoords, nextMaxCoords);
-
         // number of cells in each dimension 
         constexpr float inverseCellLen = INV_CELL_LEN;
-        const int nxcell = (int) floor((nextMaxCoords.x-nextMinCoords.x) * inverseCellLen) + 1;
-        const int nycell = (int) floor((nextMaxCoords.y-nextMinCoords.y) * inverseCellLen) + 1;
-        const int nzcell = (int) floor((nextMaxCoords.z-nextMinCoords.z) * inverseCellLen) + 1;
+        const int nxcell = (int) floor((lattice.max().x-lattice.min().x) * inverseCellLen) + 1;
+        const int nycell = (int) floor((lattice.max().y-lattice.min().y) * inverseCellLen) + 1;
+        const int nzcell = (int) floor((lattice.max().z-lattice.min().z) * inverseCellLen) + 1;
         const int ncells = nxcell * nycell * nzcell;
 
         // allocate for cursor link list implementation 
@@ -71,9 +66,9 @@ namespace CutcpCpu
             if (atoms[n].q==0) 
             continue;  
             
-            const int i = (int) floor((atoms[n].pos.x - nextMinCoords.x) * inverseCellLen);
-            const int j = (int) floor((atoms[n].pos.y - nextMinCoords.y) * inverseCellLen);
-            const int k = (int) floor((atoms[n].pos.z - nextMinCoords.z) * inverseCellLen);
+            const int i = (int) floor((atoms[n].pos.x - lattice.min().x) * inverseCellLen);
+            const int j = (int) floor((atoms[n].pos.y - lattice.min().y) * inverseCellLen);
+            const int k = (int) floor((atoms[n].pos.z - lattice.min().z) * inverseCellLen);
             const int linearCellIdx = (k*nycell + j)*nxcell + i;
 
             fromAtomToNextAtom[n] = fromCellToFirstAtom[linearCellIdx];
@@ -152,16 +147,11 @@ namespace CutcpCpu
         const float cutSqrd = exclusionCutoff * exclusionCutoff;
         const float inverseSpacing = 1.f / spacing;
 
-        // find min and max extent 
-        Vector::Vec3 nextMinCoords;
-        Vector::Vec3 nextMaxCoords;
-        Atom::GetAtomBounds(atoms, nextMinCoords, nextMaxCoords);
-
         // number of cells in each dimension 
         float inverseCellLen = INV_CELL_LEN;
-        const int nxcell = (int) floor((nextMaxCoords.x-nextMinCoords.x) * inverseCellLen) + 1;
-        const int nycell = (int) floor((nextMaxCoords.y-nextMinCoords.y) * inverseCellLen) + 1;
-        const int nzcell = (int) floor((nextMaxCoords.z-nextMinCoords.z) * inverseCellLen) + 1;
+        const int nxcell = (int) floor((lattice.max().x-lattice.min().x) * inverseCellLen) + 1;
+        const int nycell = (int) floor((lattice.max().y-lattice.min().y) * inverseCellLen) + 1;
+        const int nzcell = (int) floor((lattice.max().z-lattice.min().z) * inverseCellLen) + 1;
         const int ncells = nxcell * nycell * nzcell;
 
         // geometric hashing 
@@ -172,9 +162,9 @@ namespace CutcpCpu
             if (atoms[n].q == 0) //skip non contributing atoms
                 continue;  
             
-            const int i = (int) floorf((atoms[n].pos.x - nextMinCoords.x) * inverseCellLen);
-            const int j = (int) floorf((atoms[n].pos.y - nextMinCoords.y) * inverseCellLen);
-            const int k = (int) floorf((atoms[n].pos.z - nextMinCoords.z) * inverseCellLen);
+            const int i = (int) floorf((atoms[n].pos.x - lattice.min().x) * inverseCellLen);
+            const int j = (int) floorf((atoms[n].pos.y - lattice.min().y) * inverseCellLen);
+            const int k = (int) floorf((atoms[n].pos.z - lattice.min().z) * inverseCellLen);
             const int linearCellIdx = (k*nycell + j)*nxcell + i;
 
             fromAtomToNextAtom[n] = fromCellToFirstAtom[linearCellIdx];
