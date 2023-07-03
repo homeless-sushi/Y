@@ -94,7 +94,7 @@ namespace CutcpCuda
         nxPoints{lattice.nx()},
         nyPoints{lattice.ny()},
         nzPoints{lattice.nz()},
-        nPoints{lattice.nx()*lattice.ny()*lattice.nz()},
+        nPoints{lattice.n()},
         spacing{lattice.spacing()},
         min{lattice.min()},
         max{lattice.max()}
@@ -151,7 +151,7 @@ namespace CutcpCuda
         const unsigned int nx = lattice.nx();
         const unsigned int ny = lattice.ny();
         const unsigned int nz = lattice.nz();
-        const unsigned int size = nx*ny*nz;
+        const unsigned int size = lattice.n();
 
         std::vector<float> transposedPoints(size);
         for(int i = 0; i < size; i++){
