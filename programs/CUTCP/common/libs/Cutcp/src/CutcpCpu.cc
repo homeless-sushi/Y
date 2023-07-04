@@ -76,62 +76,75 @@ namespace CutcpCpu
         }
 
         // traverse the grid cells
-        //#pragma omp parallel for num_threads(nThreads)
-        for (int linearCellIdx = 0;  linearCellIdx < ncells;  linearCellIdx++) {
-            for (int atomIdx = fromCellToFirstAtom[linearCellIdx];  atomIdx != -1;  atomIdx = fromAtomToNextAtom[atomIdx]) {
-                const float atomX = atoms[atomIdx].pos.x - minx;
-                const float atomY = atoms[atomIdx].pos.y - miny;
-                const float atomZ = atoms[atomIdx].pos.z - minz;
-                const float atomQ = atoms[atomIdx].q;
+        #pragma omp parallel num_threads(nThreads)
+        {
+            std::vector<float> localPoints(lattice.points.size(), 0);
+            
+            #pragma omp for nowait 
+            for (int linearCellIdx = 0;  linearCellIdx < ncells;  linearCellIdx++) {
+                for (int atomIdx = fromCellToFirstAtom[linearCellIdx];  atomIdx != -1;  atomIdx = fromAtomToNextAtom[atomIdx]) {
+                    const float atomX = atoms[atomIdx].pos.x - minx;
+                    const float atomY = atoms[atomIdx].pos.y - miny;
+                    const float atomZ = atoms[atomIdx].pos.z - minz;
+                    const float atomQ = atoms[atomIdx].q;
 
-                // find closest grid point with position less than or equal to atom */
-                const int xClosest = (int) (atomX * inverseSpacing);
-                const int yClosest = (int) (atomY * inverseSpacing);
-                const int zClosest = (int) (atomZ * inverseSpacing);
+                    // find closest grid point with position less than or equal to atom */
+                    const int xClosest = (int) (atomX * inverseSpacing);
+                    const int yClosest = (int) (atomY * inverseSpacing);
+                    const int zClosest = (int) (atomZ * inverseSpacing);
 
-                // find extent of surrounding box of grid points */
-                const int radius = (int) ceilf(potentialCutoff * inverseSpacing) - 1;
-                const float ia = std::max(0, xClosest - radius);
-                const float ja = std::max(0, yClosest - radius);
-                const float ka = std::max(0, zClosest - radius);
-                const float ib = std::min(nx-1, xClosest + radius + 1);
-                const float jb = std::min(ny-1, yClosest + radius + 1);
-                const float kb = std::min(nz-1, zClosest + radius + 1);
+                    // find extent of surrounding box of grid points */
+                    const int radius = (int) ceilf(potentialCutoff * inverseSpacing) - 1;
+                    const float ia = std::max(0, xClosest - radius);
+                    const float ja = std::max(0, yClosest - radius);
+                    const float ka = std::max(0, zClosest - radius);
+                    const float ib = std::min(nx-1, xClosest + radius + 1);
+                    const float jb = std::min(ny-1, yClosest + radius + 1);
+                    const float kb = std::min(nz-1, zClosest + radius + 1);
 
-                // loop over surrounding grid points */
-                float dx, dy, dz;
-                float dz2, dydz2, r2;
+                    // loop over surrounding grid points */
+                    float dx, dy, dz;
+                    float dz2, dydz2, r2;
 
-                const float xStart = ia*spacing - atomX;
-                const float yStart = ja*spacing - atomY;
-                dz = ka*spacing - atomZ;
-                for (int k = ka;  k <= kb;  k++, dz += spacing) {
-                    const int koff = k*ny;
-                    dz2 = dz*dz;
-                    dy = yStart;
-                    for (int j = ja;  j <= jb;  j++, dy += spacing) {
-                        const int jkoff = (koff + j)*nx;
-                        dydz2 = dy*dy + dz2;
+                    const float xStart = ia*spacing - atomX;
+                    const float yStart = ja*spacing - atomY;
+                    dz = ka*spacing - atomZ;
+                    for (int k = ka;  k <= kb;  k++, dz += spacing) {
+                        const int koff = k*ny;
+                        dz2 = dz*dz;
+                        dy = yStart;
+                        for (int j = ja;  j <= jb;  j++, dy += spacing) {
+                            const int jkoff = (koff + j)*nx;
+                            dydz2 = dy*dy + dz2;
 
-                        if (dydz2 >= cutSqrd) 
-                            continue;
-                    
-                        dx = xStart;
-                        for (int i = ia;  i <= ib;  i++, dx += spacing) {
-                            r2 = dx*dx + dydz2;
-
-                            if (r2 >= cutSqrd)
+                            if (dydz2 >= cutSqrd) 
                                 continue;
+                        
+                            dx = xStart;
+                            for (int i = ia;  i <= ib;  i++, dx += spacing) {
+                                r2 = dx*dx + dydz2;
 
-                            float s = (1.f - r2 * inverseCutSqrd);
-                            float e = atomQ * (1/sqrtf(r2)) * s * s;
-                            lattice.points[jkoff + i] += e;
+                                if (r2 >= cutSqrd)
+                                    continue;
+
+                                float s = (1.f - r2 * inverseCutSqrd);
+                                float e = atomQ * (1/sqrtf(r2)) * s * s;
+                                localPoints[jkoff + i] += e;
+                            }
                         }
-                    }
-                } // end loop over surrounding grid points
+                    } // end loop over surrounding grid points
 
-            } // end loop over atoms in a gridcell
-        } // end loop over gridcells
+                } // end loop over atoms in a gridcell
+            } // end loop over gridcells
+
+            #pragma omp critical(ADD_POINTS)
+            {
+                const unsigned int n = localPoints.size();
+                for(unsigned int i = 0; i < n; ++i){
+                        lattice.points[i]+=localPoints[i];
+                }
+            }
+        }
     };
 
     void CutcpCpu::removeExclusions()
@@ -172,7 +185,7 @@ namespace CutcpCpu
         }
 
         // traverse the grid cells
-        //#pragma omp parallel for num_threads(nThreads)
+        #pragma omp parallel for num_threads(nThreads)
         for (int linearCellIdx = 0;  linearCellIdx < ncells;  linearCellIdx++) {
             for (int atomIdx = fromCellToFirstAtom[linearCellIdx];  atomIdx != -1;  atomIdx = fromAtomToNextAtom[atomIdx]) {
                 const float atomX = atoms[atomIdx].pos.x - minx;
