@@ -178,12 +178,12 @@ namespace CutcpCuda
         extern __shared__ float e[];
 
         const float cutoffSqrd = potentialCutoff*potentialCutoff;
-        for(long point = blockIdx.x; point < lattice.nPoints; point+=gridDim.x){
+        for(long pointIdx = blockIdx.x; pointIdx < lattice.nPoints; pointIdx+=gridDim.x){
 
-            const long xPointIdx = point/(lattice.nyPoints*lattice.nzPoints);
-            const long xPointRemainder = point%(lattice.nyPoints*lattice.nzPoints);
+            const long xPointIdx = pointIdx/(lattice.nyPoints*lattice.nzPoints);
+            const long xPointRemainder = pointIdx%(lattice.nyPoints*lattice.nzPoints);
             const long yPointIdx = xPointRemainder/lattice.nzPoints;
-            const long zPointIdx = xPointRemainder%lattice.nzPoints;    
+            const long zPointIdx = xPointRemainder%lattice.nzPoints;
 
             const float xPointCoord = xPointIdx * lattice.spacing;
             const float yPointCoord = yPointIdx * lattice.spacing;
@@ -209,7 +209,7 @@ namespace CutcpCuda
             for(long xNeighbour = xNeighbourStart; xNeighbour < xNeighbourStop; xNeighbour++){
                 for(long yNeighbour = yNeighbourStart; yNeighbour < yNeighbourStop; yNeighbour++){
 
-                    long cellLinearOffset = (xNeighbour*atoms.yNCells + yNeighbour)*atoms.zNCells;;
+                    long cellLinearOffset = (xNeighbour*atoms.yNCells + yNeighbour)*atoms.zNCells;
                     long cellLinearIndexStart = cellLinearOffset + zNeighbourStart;
                     long cellLinearIndexStop = cellLinearOffset + zNeighbourStop;
                     long atomIdxStart = atoms.cellIndexes[cellLinearIndexStart];
@@ -231,14 +231,15 @@ namespace CutcpCuda
                     }
                 }
             }
-            __syncthreads();
-            if(threadIdx.x == 0){
-                float eSum = 0;
-                for(unsigned int i = 0; i < blockDim.x; i++)
-                    eSum+=e[i];
 
-                lattice.points[point] = eSum;
+            __syncthreads();
+            for(unsigned int i = blockDim.x>>1; i > 0; i>>=1){
+                if(threadIdx.x < i)
+                    e[threadIdx.x]+=e[threadIdx.x+i];
+                __syncthreads();
             }
+            if(threadIdx.x == 0)
+                lattice.points[pointIdx] = e[threadIdx.x];
             __syncthreads();
         }
     };
@@ -253,15 +254,15 @@ namespace CutcpCuda
         __shared__ bool exclude[1];
 
         const float cutoffSqrd = exclusionCutoff*exclusionCutoff;
-        for(long point = blockIdx.x; point < lattice.nPoints; point+=gridDim.x){
+        for(long pointIdx = blockIdx.x; pointIdx < lattice.nPoints; pointIdx+=gridDim.x){
 
             if(threadIdx.x == 0)
                 exclude[0] = false;
 
-            const long xPointIdx = point/(lattice.nyPoints*lattice.nzPoints);
-            const long xPointRemainder = point%(lattice.nyPoints*lattice.nzPoints);
+            const long xPointIdx = pointIdx/(lattice.nyPoints*lattice.nzPoints);
+            const long xPointRemainder = pointIdx%(lattice.nyPoints*lattice.nzPoints);
             const long yPointIdx = xPointRemainder/lattice.nzPoints;
-            const long zPointIdx = xPointRemainder%lattice.nzPoints;    
+            const long zPointIdx = xPointRemainder%lattice.nzPoints;
 
             const float xPointCoord = xPointIdx * lattice.spacing;
             const float yPointCoord = yPointIdx * lattice.spacing;
@@ -308,7 +309,7 @@ namespace CutcpCuda
             }
             __syncthreads();
             if(threadIdx.x == 0 && exclude[0])
-                lattice.points[point] = 0;
+                lattice.points[pointIdx] = 0;
             __syncthreads();
         }
     };
