@@ -69,7 +69,7 @@ namespace CutcpCpu
             const int i = (int) floor((atoms[n].pos.x - lattice.min().x) * inverseCellLen);
             const int j = (int) floor((atoms[n].pos.y - lattice.min().y) * inverseCellLen);
             const int k = (int) floor((atoms[n].pos.z - lattice.min().z) * inverseCellLen);
-            const int linearCellIdx = (k*nycell + j)*nxcell + i;
+            const int linearCellIdx = (i*nycell + j)*nzcell + k;
 
             fromAtomToNextAtom[n] = fromCellToFirstAtom[linearCellIdx];
             fromCellToFirstAtom[linearCellIdx] = n;
@@ -95,41 +95,41 @@ namespace CutcpCpu
 
                     // find extent of surrounding box of grid points */
                     const int radius = (int) ceilf(potentialCutoff * inverseSpacing) - 1;
-                    const float ia = std::max(0, xClosest - radius);
-                    const float ja = std::max(0, yClosest - radius);
-                    const float ka = std::max(0, zClosest - radius);
-                    const float ib = std::min(nx-1, xClosest + radius + 1);
-                    const float jb = std::min(ny-1, yClosest + radius + 1);
-                    const float kb = std::min(nz-1, zClosest + radius + 1);
+                    const float iStart = std::max(0, xClosest - radius);
+                    const float jStart = std::max(0, yClosest - radius);
+                    const float kStart = std::max(0, zClosest - radius);
+                    const float iStop = std::min(nx-1, xClosest + radius + 1);
+                    const float jStop = std::min(ny-1, yClosest + radius + 1);
+                    const float kStop = std::min(nz-1, zClosest + radius + 1);
 
-                    // loop over surrounding grid points */
-                    float dx, dy, dz;
-                    float dz2, dydz2, r2;
+                    float dx = iStart*spacing - atomX;
+                    const float yStart = jStart*spacing - atomY;
+                    const float zStart = kStart*spacing - atomZ;
+                    for (int i = iStart; i <= iStop; i++, dx+=spacing) {
 
-                    const float xStart = ia*spacing - atomX;
-                    const float yStart = ja*spacing - atomY;
-                    dz = ka*spacing - atomZ;
-                    for (int k = ka;  k <= kb;  k++, dz += spacing) {
-                        const int koff = k*ny;
-                        dz2 = dz*dz;
-                        dy = yStart;
-                        for (int j = ja;  j <= jb;  j++, dy += spacing) {
-                            const int jkoff = (koff + j)*nx;
-                            dydz2 = dy*dy + dz2;
+                        const int iOffset = i*ny;
+                        float dx2 = dx*dx;
+                        float dy = yStart;
 
-                            if (dydz2 >= cutSqrd) 
+                        for (int j = jStart; j <= jStop; j++, dy+=spacing) {
+
+                            const int ijOffset = (iOffset + j)*nz;
+                            float dxdy2 = dx2+ dy*dy;
+
+                            if (dxdy2 >= cutSqrd) 
                                 continue;
                         
-                            dx = xStart;
-                            for (int i = ia;  i <= ib;  i++, dx += spacing) {
-                                r2 = dx*dx + dydz2;
+                            float dz = zStart;
+                            for (int k = kStart; k <= kStop; k++, dz+=spacing) {
+
+                                float r2 = dxdy2 + dz*dz;
 
                                 if (r2 >= cutSqrd)
                                     continue;
 
                                 float s = (1.f - r2 * inverseCutSqrd);
                                 float e = atomQ * (1/sqrtf(r2)) * s * s;
-                                localPoints[jkoff + i] += e;
+                                localPoints[ijOffset + k] += e;
                             }
                         }
                     } // end loop over surrounding grid points
@@ -178,7 +178,7 @@ namespace CutcpCpu
             const int i = (int) floorf((atoms[n].pos.x - lattice.min().x) * inverseCellLen);
             const int j = (int) floorf((atoms[n].pos.y - lattice.min().y) * inverseCellLen);
             const int k = (int) floorf((atoms[n].pos.z - lattice.min().z) * inverseCellLen);
-            const int linearCellIdx = (k*nycell + j)*nxcell + i;
+            const int linearCellIdx = (i*nycell + j)*nzcell + k;
 
             fromAtomToNextAtom[n] = fromCellToFirstAtom[linearCellIdx];
             fromCellToFirstAtom[linearCellIdx] = n;
@@ -200,36 +200,35 @@ namespace CutcpCpu
 
                 // trim the cell search space according to the cutoff
                 const int radius = (int) ceilf(exclusionCutoff * inverseSpacing) - 1; // radius as a number of cells
-                const int ia = std::max(0, xClosest - radius);
-                const int ja = std::max(0, yClosest - radius);
-                const int ka = std::max(0, zClosest - radius);
-                const int ib = std::min(nx-1, xClosest + radius + 1);
-                const int jb = std::min(ny-1, yClosest + radius + 1);
-                const int kb = std::min(nz-1, zClosest + radius + 1);
+                const int iStart = std::max(0, xClosest - radius);
+                const int jStart = std::max(0, yClosest - radius);
+                const int kStart = std::max(0, zClosest - radius);
+                const int iStop = std::min(nx-1, xClosest + radius + 1);
+                const int jStop = std::min(ny-1, yClosest + radius + 1);
+                const int kStop = std::min(nz-1, zClosest + radius + 1);
 
                 // loop over surrounding grid points
-                float dx, dy, dz;
-                float dz2, dydz2, r2;
+                float dx = iStart*spacing - atomX;
+                const float yStart = jStart*spacing - atomY;
+                const float zStart = kStart*spacing - atomZ;
+                for (int i = iStart; i <= iStop; i++, dx += spacing) {
 
-                const float xStart = ia*spacing - atomX; // distance between fist cell's X and atomX
-                const float yStart = ja*spacing - atomY; // distance between fist cell's Y and atomY
-                dz = ka*spacing - atomZ;
-                for (int k = ka;  k <= kb;  k++, dz += spacing) {
-                    const int koff = k*ny;
-                    dz2 = dz*dz;
+                    const int iOffset = i*ny;
+                    float dx2 = dx*dx;
+                    float dy = yStart;
 
-                    dy = yStart;
-                    for (int j = ja;  j <= jb;  j++, dy += spacing) {
-                        const int jkoff = (koff + j)*nx;
-                        dydz2 = dy*dy + dz2;
+                    for (int j = jStart; j <= jStop; j++, dy += spacing) {
 
-                        dx = xStart;
-                        for (int i = ia;  i <= ib;  i++, dx += spacing) {
-                            r2 = dx*dx + dydz2;
+                        const int ijOffset = (iOffset + j)*nz;
+                        float dxdy2 = dy*dy + dx2;
+                    
+                        float dz = zStart;
+                        for (int k = kStart; k <= kStop; k++, dz += spacing) {
 
-                            // If atom and lattice point are too close, set the lattice value
+                            float r2 = dxdy2 + dz*dz;
+
                             if (r2 < cutSqrd)
-                                lattice.points[jkoff + i] = 0;
+                                lattice.points[ijOffset + k] = 0;
                         }
                     }
                 } // for each grid point in the radius

@@ -147,24 +147,6 @@ namespace CutcpCuda
 
     Lattice::Lattice CutcpCuda::getResult(){
         cudaMemcpy(lattice.points.data(), latticeCuda.points, sizeof(float)*lattice.points.size(), cudaMemcpyDeviceToHost);
-
-        const unsigned int nx = lattice.nx();
-        const unsigned int ny = lattice.ny();
-        const unsigned int nz = lattice.nz();
-        const unsigned int size = lattice.n();
-
-        std::vector<float> transposedPoints(size);
-        for(int i = 0; i < size; i++){
-            const long x = i/(ny*nz);
-            const long xRemainder = i%(ny*nz);
-            const long y = xRemainder/nz;
-            const long z = xRemainder%nz;
-
-            const long transposedLinIdx = z*ny*nx+y*nx+x;
-            transposedPoints[transposedLinIdx] = lattice.points[i];
-        }
-
-        lattice.points = transposedPoints;
         return lattice;
     };
     
