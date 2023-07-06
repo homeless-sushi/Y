@@ -21,12 +21,6 @@
 namespace po = boost::program_options;
 
 po::options_description SetupOptions();
-void CastKnobs(
-    unsigned int deviceId,
-    unsigned int gpuBlockSizeExp,
-    Knobs::DEVICE& device,
-    Knobs::GpuKnobs::BLOCK_SIZE& gpuBlockSize
-);
 
 int main(int argc, char *argv[])
 {
@@ -42,31 +36,17 @@ int main(int argc, char *argv[])
     margot::init();
     margot::cutcp::context().manager.wait_for_knowledge(10);
 
-    unsigned int deviceId = 0;
-    unsigned int gpuBlockSizeExp = 0;
-    
-    Knobs::DEVICE device;
-    Knobs::GpuKnobs::BLOCK_SIZE gpuBlockSize;
+    Knobs::DEVICE device = Knobs::DEVICE::CPU;
 
     unsigned int cpuThreads = 1;
     unsigned int precision = 1;
 
-    CastKnobs(
-        deviceId,
-        gpuBlockSizeExp,
-        device,
-        gpuBlockSize
-    );
+    std::string inputFileURL(vm["input-file"].as<std::string>());
+    std::vector<Atom::Atom> atoms = Atom::ReadAtomFile(inputFileURL);
 
     while(margot::cutcp::context().manager.in_design_space_exploration()){
 
-        if(margot::cutcp::update(cpuThreads, deviceId, gpuBlockSizeExp, precision)){
-            CastKnobs(
-                deviceId,
-                gpuBlockSizeExp,
-                device,
-                gpuBlockSize
-            );
+        if(margot::cutcp::update(cpuThreads, precision)){
             margot::cutcp::context().manager.configuration_applied();
         }
 
@@ -118,17 +98,4 @@ po::options_description SetupOptions()
     ;
 
     return desc;
-}
-
-void CastKnobs(
-    unsigned int deviceId,
-    unsigned int gpuBlockSizeExp,
-    Knobs::DEVICE& device,
-    Knobs::GpuKnobs::BLOCK_SIZE& gpuBlockSize
-)
-{
-    device = static_cast<Knobs::DEVICE>(deviceId);
-    gpuBlockSize = static_cast<Knobs::GpuKnobs::BLOCK_SIZE>(
-        Knobs::GpuKnobs::BLOCK_32 << gpuBlockSizeExp
-    );
 }
