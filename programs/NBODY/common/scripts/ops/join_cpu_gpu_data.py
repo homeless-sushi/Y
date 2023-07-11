@@ -8,7 +8,7 @@ def setup_args() :
         prog='Join CPU GPU data',
         description=
             'This program completes CPU and GPU csv, and joins them\n\n',
-        usage=f'{sys.argv[0]} MODE cpu-file gpu-file output-file'
+        usage=f'{sys.argv[0]} cpu-file gpu-file output-file'
     )
 
     parser.add_argument(
