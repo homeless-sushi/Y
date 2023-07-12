@@ -161,8 +161,12 @@ int main(int argc, char *argv[])
         std::cout << "WIND DOWN,STOP,CPU," << now() << std::endl;
         //START: WIND DOWN
 
+        //START: MARGOT PUSH
+        std::cout << "MARGOT PUSH,START,CPU," << now() << std::endl;
         margot::cutcp::stop_monitors();
         margot::cutcp::push_custom_monitor_values();
+        std::cout << "MARGOT PUSH,STOP,CPU," << now() << std::endl;
+        //STOP: MARGOT PUSH
         
         //Add tick
         //START: CONTROLLER PUSH
