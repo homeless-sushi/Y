@@ -90,8 +90,8 @@ int main(int argc, char *argv[])
 
         std::unique_ptr<Cutcp::Cutcp> cutcp( 
                 device == Knobs::DEVICE::GPU ?
-                static_cast<Cutcp::Cutcp*>(new CutcpCuda::CutcpCuda(lattice, atoms, cutoff, exclusionCutoff, 64)) :
-                static_cast<Cutcp::Cutcp*>(new CutcpCpu::CutcpCpu(lattice, atoms, cutoff, exclusionCutoff, 16))
+                static_cast<Cutcp::Cutcp*>(new CutcpCuda::CutcpCuda(lattice, atoms, cutoff, exclusionCutoff, gpuBlockSize)) :
+                static_cast<Cutcp::Cutcp*>(new CutcpCpu::CutcpCpu(lattice, atoms, cutoff, exclusionCutoff, cpuThreads))
             );
         cutcp->run();
         lattice = cutcp->getResult();
