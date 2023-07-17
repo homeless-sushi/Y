@@ -187,10 +187,6 @@ int main(int argc, char *argv[])
         std::cout << "KERNEL,STOP," << Knobs::DeviceToString(device) << "," << now() << std::endl;
         //STOP: KERNEL
 
-        while(!bfs->run()){}
-
-        std::vector<int> costs = bfs->getResult();
-
         //START: WIND DOWN
         std::cout << "WIND DOWN,START,CPU," << now() << std::endl;
         if(vm.count("output-file")){
