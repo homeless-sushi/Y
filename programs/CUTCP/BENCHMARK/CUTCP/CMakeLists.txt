@@ -28,6 +28,7 @@ target_link_libraries(CUTCP_Benchmark
 
 # Add Margot Library
 get_filename_component(MARGOT_JSON "margot/margot.json" ABSOLUTE)
+get_filename_component(OPS_JSON "margot/ops.json" ABSOLUTE)
 margot_heel_generate_interface("${MARGOT_JSON}")
 target_link_libraries(CUTCP_Benchmark PRIVATE margot::margot_heel_interface ${CUDA_LIBRARIES})
 target_compile_features(CUTCP_Benchmark PRIVATE cxx_std_17 )
