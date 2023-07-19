@@ -151,10 +151,9 @@ int main(int argc, char *argv[])
             );
             margot::bfs::context().manager.configuration_applied();
         }
+        margot::bfs::start_monitors();
         std::cout << "MARGOT PULL,STOP,CPU," << now() << std::endl;
         //STOP: MARGOT PULL
-
-        margot::bfs::start_monitors();
 
         //START: WIND UP
         std::cout << "WIND UP,START,CPU," << now() << std::endl;
@@ -183,19 +182,17 @@ int main(int argc, char *argv[])
         //START: KERNEL
         std::cout << "KERNEL,START," << Knobs::DeviceToString(device) << "," << now() << std::endl;
         while(!bfs->run()){}
-        std::vector<int> costs = bfs->getResult();
         std::cout << "KERNEL,STOP," << Knobs::DeviceToString(device) << "," << now() << std::endl;
         //STOP: KERNEL
 
         //START: WIND DOWN
+        std::vector<int> costs = bfs->getResult();
         std::cout << "WIND DOWN,START,CPU," << now() << std::endl;
         if(vm.count("output-file")){
             Bfs::WriteCosts(vm["output-file"].as<std::string>(), costs);
         }
         std::cout << "WIND DOWN,STOP,CPU," << now() << std::endl;
         //START: WIND DOWN
-
-
 
         //START: MARGOT PUSH
         std::cout << "MARGOT PUSH,START,CPU," << now() << std::endl;

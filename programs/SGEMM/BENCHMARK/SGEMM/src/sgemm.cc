@@ -119,12 +119,12 @@ int main(int argc, char *argv[])
             );
             margot::sgemm::context().manager.configuration_applied();
         }
+        margot::sgemm::start_monitors();
         std::cout << "MARGOT PULL,STOP,CPU," << now() << std::endl;
         //STOP: MARGOT PULL
 
         //START: WIND UP
         std::cout << "WIND UP,START,CPU," << now() << std::endl;
-        margot::sgemm::start_monitors();
         std::string inputAUrl(vm["input-file"].as<std::string>());
         std::string inputBUrl(vm["input-file"].as<std::string>());
         std::string inputCUrl(vm["input-file"].as<std::string>());
@@ -143,12 +143,12 @@ int main(int argc, char *argv[])
         //START: KERNEL
         std::cout << "KERNEL,START," << Knobs::DeviceToString(device) << "," << now() << std::endl;
         sgemm->run();
-        Sgemm::Matrix res(sgemm->getResult());
         std::cout << "KERNEL,STOP," << Knobs::DeviceToString(device) << "," << now() << std::endl;
         //STOP: KERNEL
 
         //START: WIND DOWN
         std::cout << "WIND DOWN,START,CPU," << now() << std::endl;
+        Sgemm::Matrix res(sgemm->getResult());
         if(vm.count("output-file")){
             Sgemm::WriteMatrixFile(vm["output-file"].as<std::string>(), res);
         }

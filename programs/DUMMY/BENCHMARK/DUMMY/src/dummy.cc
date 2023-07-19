@@ -98,11 +98,11 @@ int main(int argc, char *argv[])
         //START: KERNEL
         std::cout << "KERNEL,START,GPU," << now() << std::endl;
         dummy.run();
-        dummyData = dummy.getResult();
         std::cout << "KERNEL,STOP,GPU," << now() << std::endl;
         //STOP: KERNEL
         
         //START: WIND DOWN
+        dummyData = dummy.getResult();
         std::cout << "WIND DOWN,START,CPU," << now() << std::endl;
         if(vm.count("output-file")){
             std::string outputFileURL(vm["output-file"].as<std::string>());

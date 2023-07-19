@@ -113,12 +113,12 @@ int main(int argc, char *argv[])
             );
             margot::nbody::context().manager.configuration_applied();
         }
+        margot::nbody::start_monitors();
         std::cout << "MARGOT PULL,STOP,CPU," << now() << std::endl;
         //STOP: MARGOT PULL
 
         //START: WIND UP
         std::cout << "WIND UP,START,CPU," << now() << std::endl;
-        margot::nbody::start_monitors();
         std::string inputFileURL(vm["input-file"].as<std::string>());
         std::vector<Nbody::Body> bodies;
         float targetSimulationTime;
@@ -146,12 +146,12 @@ int main(int argc, char *argv[])
         for(actualSimulationTime = 0.f; actualSimulationTime < targetSimulationTime; actualSimulationTime+=actualTimeStep){
             nbody->run();
         }
-        bodies = nbody->getResult();
         std::cout << "KERNEL,STOP," << Knobs::DeviceToString(device) << "," << now() << std::endl;
         //STOP: KERNEL
         
         //START: WIND DOWN
         std::cout << "WIND DOWN,START,CPU," << now() << std::endl;
+        bodies = nbody->getResult();
         if(vm.count("output-file")){
             Nbody::WriteBodyFile(vm["output-file"].as<std::string>(), 
                 bodies,

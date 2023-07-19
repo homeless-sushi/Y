@@ -116,12 +116,12 @@ int main(int argc, char *argv[])
             );
             margot::cutcp::context().manager.configuration_applied();
         }
+        margot::cutcp::start_monitors();
         std::cout << "MARGOT PULL,STOP,CPU," << now() << std::endl;
         //STOP: MARGOT PULL
 
         //START: WIND UP
         std::cout << "WIND UP,START,CPU," << now() << std::endl;
-        margot::cutcp::start_monitors();
         std::string inputFileURL(vm["input-file"].as<std::string>());
         std::vector<Atom::Atom> atoms = Atom::ReadAtomFile(inputFileURL);
     
@@ -149,12 +149,12 @@ int main(int argc, char *argv[])
         //START: KERNEL
         std::cout << "KERNEL,START," << Knobs::DeviceToString(device) << "," << now() << std::endl;
         cutcp->run();
-        lattice = cutcp->getResult();
         std::cout << "KERNEL,STOP," << Knobs::DeviceToString(device) << "," << now() << std::endl;
         //STOP: KERNEL
 
         //START: WIND DOWN
         std::cout << "WIND DOWN,START,CPU," << now() << std::endl;
+        lattice = cutcp->getResult();
         if(vm.count("output-file")){
             Cutcp::WriteLattice(vm["output-file"].as<std::string>(), lattice);
         }
