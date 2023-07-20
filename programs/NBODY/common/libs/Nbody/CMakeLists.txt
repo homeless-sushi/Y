@@ -16,4 +16,5 @@ target_include_directories(NBODY_Nbody_LIB
 )
 
 # Add library dependency
+target_link_libraries(NBODY_Nbody_LIB COMMON_CudaError_Lib)
 target_link_libraries(NBODY_Nbody_LIB COMMON_Vector_Lib)

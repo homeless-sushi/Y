@@ -10,6 +10,8 @@
 #include <Atom/Atom.h>
 #include <Atom/Utils.h>
 
+#include "CudaError/CudaError.h"
+
 namespace CutcpCuda
 {
     AtomsCrs::AtomsCrs(
@@ -58,10 +60,10 @@ namespace CutcpCuda
             cellIndexesHost[i+1] = currCellIndex;
         }
 
-        cudaMalloc(&atomsValues, sizeof(Atom::Atom)*atomsValuesHost.size());
-        cudaMalloc(&cellIndexes, sizeof(long)*cellIndexesHost.size());
-        cudaMemcpy(atomsValues, atomsValuesHost.data(), sizeof(Atom::Atom)*atomsValuesHost.size(), cudaMemcpyHostToDevice);
-        cudaMemcpy(cellIndexes, cellIndexesHost.data(), sizeof(long)*cellIndexesHost.size(), cudaMemcpyHostToDevice);
+        CudaErrorCheck(cudaMalloc(&atomsValues, sizeof(Atom::Atom)*atomsValuesHost.size()));
+        CudaErrorCheck(cudaMalloc(&cellIndexes, sizeof(long)*cellIndexesHost.size()));
+        CudaErrorCheck(cudaMemcpy(atomsValues, atomsValuesHost.data(), sizeof(Atom::Atom)*atomsValuesHost.size(), cudaMemcpyHostToDevice));
+        CudaErrorCheck(cudaMemcpy(cellIndexes, cellIndexesHost.data(), sizeof(long)*cellIndexesHost.size(), cudaMemcpyHostToDevice));
     };
 
     AtomsCrs::AtomsCrs(const AtomsCrs& owner) :
@@ -79,8 +81,8 @@ namespace CutcpCuda
     {   
         nAtoms = 0;
         if(owner){
-            cudaFree(atomsValues);
-            cudaFree(cellIndexes);
+            CudaErrorCheck(cudaFree(atomsValues));
+            CudaErrorCheck(cudaFree(cellIndexes));
         }
         atomsValues = nullptr;
         cellIndexes = nullptr;
@@ -99,8 +101,8 @@ namespace CutcpCuda
         min{lattice.min()},
         max{lattice.max()}
     {
-        cudaMalloc(&points, sizeof(float)*nPoints);
-        cudaMemset(points, 0.f, sizeof(float)*nPoints);
+        CudaErrorCheck(cudaMalloc(&points, sizeof(float)*nPoints));
+        CudaErrorCheck(cudaMemset(points, 0.f, sizeof(float)*nPoints));
     };
 
     LatticeCuda::LatticeCuda(const LatticeCuda& owner) :
@@ -122,7 +124,7 @@ namespace CutcpCuda
         nzPoints = 0;
         nPoints = 0;
         if(owner){
-            cudaFree(points);
+            CudaErrorCheck(cudaFree(points));
         }
         points = nullptr;
     }
@@ -146,7 +148,12 @@ namespace CutcpCuda
     CutcpCuda::~CutcpCuda(){};
 
     Lattice::Lattice CutcpCuda::getResult(){
-        cudaMemcpy(lattice.points.data(), latticeCuda.points, sizeof(float)*lattice.points.size(), cudaMemcpyDeviceToHost);
+        CudaErrorCheck(cudaMemcpy(
+            lattice.points.data(),
+            latticeCuda.points,
+            sizeof(float)*lattice.points.size(),
+            cudaMemcpyDeviceToHost
+        ));
         return lattice;
     };
     
@@ -299,18 +306,20 @@ namespace CutcpCuda
     void CutcpCuda::run()
     {   
         cudaDeviceProp deviceProp;
-        cudaGetDeviceProperties(&deviceProp, 0);
+        CudaErrorCheck(cudaGetDeviceProperties(&deviceProp, 0));
         unsigned int smCount = deviceProp.multiProcessorCount;
         cutoffPotential<<<smCount,blockSize,blockSize*sizeof(float)>>>(
             atomCrs,
             latticeCuda,
             potentialCutoff
         );
+        CudaKernelErrorCheck();
         cutoffExclusion<<<smCount,blockSize,sizeof(bool)>>>(
             atomCrs,
             latticeCuda,
             exclusionCutoff
         );
-        cudaDeviceSynchronize();
+        CudaKernelErrorCheck();
+        CudaErrorCheck(cudaDeviceSynchronize());
     };
 }

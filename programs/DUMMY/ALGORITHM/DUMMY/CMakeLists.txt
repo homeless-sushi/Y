@@ -21,6 +21,7 @@ target_include_directories(DUMMY_Algorithm
 )
 target_link_libraries(DUMMY_Algorithm
     PUBLIC
+        COMMON_CudaError_Lib
         DUMMY_Dummy_LIB
 )
 

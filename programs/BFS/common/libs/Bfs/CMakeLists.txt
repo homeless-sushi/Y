@@ -17,4 +17,5 @@ target_include_directories(BFS_Bfs_LIB
 )
 
 # Add library dependency
+target_link_libraries(BFS_Bfs_LIB COMMON_CudaError_Lib)
 target_link_libraries(BFS_Bfs_LIB BFS_Graph_LIB)

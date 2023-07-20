@@ -17,4 +17,5 @@ target_include_directories(CUTCP_Cutcp_LIB
 
 # Add Atom dependency
 target_link_libraries(CUTCP_Cutcp_LIB COMMON_Vector_Lib)
+target_link_libraries(CUTCP_Cutcp_LIB COMMON_CudaError_Lib)
 target_link_libraries(CUTCP_Cutcp_LIB CUTCP_Atom_LIB)

@@ -13,3 +13,6 @@ target_include_directories(DUMMY_Dummy_LIB
     PUBLIC
         "include"
 )
+
+# Add library dependency
+target_link_libraries(DUMMY_Dummy_LIB COMMON_CudaError_Lib)

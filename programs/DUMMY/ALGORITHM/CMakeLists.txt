@@ -34,4 +34,5 @@ add_subdirectory("DUMMY")
 # Add these out-of-tree subdirectories
 set(DUMMY_COMMON_DIR "../common")
 add_subdirectory(${DUMMY_COMMON_DIR} "common/dummy")
-
+set(PROJECT_COMMON_DIR "../../../common")
+add_subdirectory(${PROJECT_COMMON_DIR} "common/project")

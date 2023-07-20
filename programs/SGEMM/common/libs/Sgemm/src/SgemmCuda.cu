@@ -7,6 +7,8 @@
 
 #include <cmath>
 
+#include "CudaError/CudaError.h"
+
 namespace Sgemm
 {
     __global__
@@ -81,19 +83,34 @@ namespace Sgemm
             throw std::runtime_error(errorMsg.str());
         }
         
-        cudaMalloc(&aDevice_, sizeof(float)*a_.nrows()*a_.ncols());
-        cudaMalloc(&bDevice_, sizeof(float)*b_.nrows()*b_.ncols());
-        cudaMalloc(&cDevice_, sizeof(float)*c_.nrows()*c_.ncols());
-        cudaMemcpy(aDevice_, a_.data(), sizeof(float)*a_.nrows()*a_.ncols(), cudaMemcpyKind::cudaMemcpyHostToDevice);
-        cudaMemcpy(bDevice_, b_.data(), sizeof(float)*b_.nrows()*b_.ncols(), cudaMemcpyKind::cudaMemcpyHostToDevice);
-        cudaMemcpy(cDevice_, c_.data(), sizeof(float)*c_.nrows()*c_.ncols(), cudaMemcpyKind::cudaMemcpyHostToDevice);
+        CudaErrorCheck(cudaMalloc(&aDevice_, sizeof(float)*a_.nrows()*a_.ncols()));
+        CudaErrorCheck(cudaMalloc(&bDevice_, sizeof(float)*b_.nrows()*b_.ncols()));
+        CudaErrorCheck(cudaMalloc(&cDevice_, sizeof(float)*c_.nrows()*c_.ncols()));
+        CudaErrorCheck(cudaMemcpy(
+            aDevice_,
+            a_.data(),
+            sizeof(float)*a_.nrows()*a_.ncols(),
+            cudaMemcpyKind::cudaMemcpyHostToDevice
+        ));
+        CudaErrorCheck(cudaMemcpy(
+            bDevice_,
+            b_.data(),
+            sizeof(float)*b_.nrows()*b_.ncols(),
+            cudaMemcpyKind::cudaMemcpyHostToDevice
+        ));
+        CudaErrorCheck(cudaMemcpy(
+            cDevice_,
+            c_.data(),
+            sizeof(float)*c_.nrows()*c_.ncols(),
+            cudaMemcpyKind::cudaMemcpyHostToDevice
+        ));
     }
 
     SgemmCuda::~SgemmCuda()
     {
-        cudaFree(aDevice_);
-        cudaFree(bDevice_);
-        cudaFree(cDevice_);
+        CudaErrorCheck(cudaFree(aDevice_));
+        CudaErrorCheck(cudaFree(bDevice_));
+        CudaErrorCheck(cudaFree(cDevice_));
         aDevice_ = nullptr;
         bDevice_ = nullptr;
         cDevice_ = nullptr;
@@ -113,11 +130,17 @@ namespace Sgemm
             c_.nrows(),
             tileSize_
         );
+        CudaKernelErrorCheck();
     }
 
     Matrix SgemmCuda::getResult(){
         float* resData_ = (float*) malloc(sizeof(float)*c_.nrows()*c_.ncols());
-        cudaMemcpy(resData_, cDevice_, sizeof(float)*c_.nrows()*c_.ncols(), cudaMemcpyKind::cudaMemcpyDeviceToHost);
+        CudaErrorCheck(cudaMemcpy(
+            resData_,
+            cDevice_,
+            sizeof(float)*c_.nrows()*c_.ncols(),
+            cudaMemcpyKind::cudaMemcpyDeviceToHost
+        ));
         Matrix res(c_.nrows(), c_.ncols(), resData_);
         return res;
     }

@@ -4,6 +4,8 @@
 
 #include <cuda_runtime.h>
 
+#include "CudaError/CudaError.h"
+
 namespace Dummy 
 {
     
@@ -18,21 +20,31 @@ namespace Dummy
         blockLen{blockLen},
         times{times}
     {
-        cudaMalloc(&gpu_in, sizeof(float)*data.size());
-        cudaMemcpy(gpu_in, data.data(), sizeof(float)*data.size(), cudaMemcpyHostToDevice);
-        cudaMalloc(&gpu_out, sizeof(float)*data.size());
-        cudaMemset(gpu_out, 0, sizeof(float)*data.size());
+        CudaErrorCheck(cudaMalloc(&gpu_in, sizeof(float)*data.size()));
+        CudaErrorCheck(cudaMemcpy(
+            gpu_in,
+            data.data(),
+            sizeof(float)*data.size(),
+            cudaMemcpyHostToDevice
+        ));
+        CudaErrorCheck(cudaMalloc(&gpu_out, sizeof(float)*data.size()));
+        CudaErrorCheck(cudaMemset(gpu_out, 0, sizeof(float)*data.size()));
     };
 
     Dummy::~Dummy()
     {
-        cudaFree(gpu_in);
-        cudaFree(gpu_out);
+        CudaErrorCheck(cudaFree(gpu_in));
+        CudaErrorCheck(cudaFree(gpu_out));
     };
 
     std::vector<float> Dummy::getResult()
     {
-        cudaMemcpy(data.data(), gpu_out, sizeof(float)*data.size(), cudaMemcpyDeviceToHost);
+        CudaErrorCheck(cudaMemcpy(
+            data.data(),
+            gpu_out,
+            sizeof(float)*data.size(),
+            cudaMemcpyDeviceToHost
+        ));
         return data;
     }
 
@@ -55,6 +67,7 @@ namespace Dummy
     void Dummy::run()
     {
         dummyKernel<<<gridLen, blockLen>>>(gpu_in, gpu_out, data.size(), times);
-        cudaDeviceSynchronize();
+        CudaKernelErrorCheck();
+        CudaErrorCheck(cudaDeviceSynchronize());
     };
 }

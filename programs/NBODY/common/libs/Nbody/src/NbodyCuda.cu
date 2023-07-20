@@ -6,6 +6,8 @@
 
 #include <cuda_runtime.h>
 
+#include "CudaError/CudaError.h"
+
 namespace NbodyCuda 
 {
     BodySoa::BodySoa() :
@@ -23,12 +25,12 @@ namespace NbodyCuda
         owner{true},
         n{n}
     {
-        cudaMalloc(&x, sizeof(float)*n);
-        cudaMalloc(&y, sizeof(float)*n);
-        cudaMalloc(&z, sizeof(float)*n);
-        cudaMalloc(&vx, sizeof(float)*n);
-        cudaMalloc(&vy, sizeof(float)*n);
-        cudaMalloc(&vz, sizeof(float)*n);
+        CudaErrorCheck(cudaMalloc(&x, sizeof(float)*n));
+        CudaErrorCheck(cudaMalloc(&y, sizeof(float)*n));
+        CudaErrorCheck(cudaMalloc(&z, sizeof(float)*n));
+        CudaErrorCheck(cudaMalloc(&vx, sizeof(float)*n));
+        CudaErrorCheck(cudaMalloc(&vy, sizeof(float)*n));
+        CudaErrorCheck(cudaMalloc(&vz, sizeof(float)*n));
     };
 
     BodySoa::BodySoa(const std::vector<::Nbody::Body>& bodies) :
@@ -49,19 +51,31 @@ namespace NbodyCuda
             tmp_vy[i] = bodies[i].vel.y;
             tmp_vz[i] = bodies[i].vel.z;
         }
-        cudaMalloc(&x, sizeof(float)*n);
-        cudaMalloc(&y, sizeof(float)*n);
-        cudaMalloc(&z, sizeof(float)*n);
-        cudaMalloc(&vx, sizeof(float)*n);
-        cudaMalloc(&vy, sizeof(float)*n);
-        cudaMalloc(&vz, sizeof(float)*n);
+        CudaErrorCheck(cudaMalloc(&x, sizeof(float)*n));
+        CudaErrorCheck(cudaMalloc(&y, sizeof(float)*n));
+        CudaErrorCheck(cudaMalloc(&z, sizeof(float)*n));
+        CudaErrorCheck(cudaMalloc(&vx, sizeof(float)*n));
+        CudaErrorCheck(cudaMalloc(&vy, sizeof(float)*n));
+        CudaErrorCheck(cudaMalloc(&vz, sizeof(float)*n));
 
-        cudaMemcpy(x, tmp_x, sizeof(float)*n, cudaMemcpyHostToDevice);
-        cudaMemcpy(y, tmp_y, sizeof(float)*n, cudaMemcpyHostToDevice);
-        cudaMemcpy(z, tmp_z, sizeof(float)*n, cudaMemcpyHostToDevice);
-        cudaMemcpy(vx, tmp_vx, sizeof(float)*n, cudaMemcpyHostToDevice);
-        cudaMemcpy(vy, tmp_vy, sizeof(float)*n, cudaMemcpyHostToDevice);
-        cudaMemcpy(vz, tmp_vz, sizeof(float)*n, cudaMemcpyHostToDevice);
+        CudaErrorCheck(
+            cudaMemcpy(x, tmp_x, sizeof(float)*n, cudaMemcpyHostToDevice)
+        );
+        CudaErrorCheck(
+            cudaMemcpy(y, tmp_y, sizeof(float)*n, cudaMemcpyHostToDevice)
+        );
+        CudaErrorCheck(
+            cudaMemcpy(z, tmp_z, sizeof(float)*n, cudaMemcpyHostToDevice)
+        );
+        CudaErrorCheck(
+            cudaMemcpy(vx, tmp_vx, sizeof(float)*n, cudaMemcpyHostToDevice)
+        );
+        CudaErrorCheck(
+            cudaMemcpy(vy, tmp_vy, sizeof(float)*n, cudaMemcpyHostToDevice)
+        );
+        CudaErrorCheck(
+            cudaMemcpy(vz, tmp_vz, sizeof(float)*n, cudaMemcpyHostToDevice)
+        );
 
         free(tmp_x);
         free(tmp_y);
@@ -223,7 +237,8 @@ namespace NbodyCuda
         const unsigned int blockDim_x = blockSize;
         const unsigned int gridDim_x = (n + blockDim_x - 1) / blockDim_x;
         kernel<<<gridDim_x, blockDim_x, blockDim_x*sizeof(float)*3>>>(in, out, dt, n);
-        cudaDeviceSynchronize();
+        CudaKernelErrorCheck();
+        CudaErrorCheck(cudaDeviceSynchronize());
         in.swap(out);
     };
 

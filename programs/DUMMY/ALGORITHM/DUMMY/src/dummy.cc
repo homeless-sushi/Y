@@ -4,12 +4,14 @@
 #include <string>
 #include <vector>
 
-#include "Dummy/Dummy.h"
-#include "Dummy/ReadWrite.h"
-
 #include <cuda_runtime.h>
 
 #include <boost/program_options.hpp>
+
+#include "Dummy/Dummy.h"
+#include "Dummy/ReadWrite.h"
+
+#include "CudaError/CudaError.h"
 
 namespace po = boost::program_options;
 
@@ -32,7 +34,7 @@ int main(int argc, char *argv[])
     Dummy::ReadFile(inputFileURL, fileData);
 
     cudaDeviceProp deviceProp;
-    cudaGetDeviceProperties(&deviceProp, 0);
+    CudaErrorCheck(cudaGetDeviceProperties(&deviceProp, 0));
     unsigned int smCount = deviceProp.multiProcessorCount;
     unsigned int warpSize = deviceProp.warpSize;
     unsigned int nThreads = smCount*warpSize;

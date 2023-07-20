@@ -16,3 +16,6 @@ target_include_directories(SGEMM_Sgemm_LIB
     PUBLIC
         "include"
 )
+
+# Add library dependency
+target_link_libraries(SGEMM_Sgemm_LIB COMMON_CudaError_Lib)

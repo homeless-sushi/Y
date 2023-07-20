@@ -7,10 +7,12 @@
 
 #include <cuda_runtime.h>
 
+#include <boost/program_options.hpp>
+
 #include "Dummy/Dummy.h"
 #include "Dummy/ReadWrite.h"
 
-#include <boost/program_options.hpp>
+#include "CudaError/CudaError.h"
 
 #include "AppRegisterCommon/AppRegister.h"
 #include "AppRegisterCommon/Semaphore.h"
@@ -84,7 +86,7 @@ int main(int argc, char *argv[])
         Dummy::ReadFile(inputFileURL, fileData);
 
         cudaDeviceProp deviceProp;
-        cudaGetDeviceProperties(&deviceProp, 0);
+        CudaErrorCheck(cudaGetDeviceProperties(&deviceProp, 0));
         unsigned int smCount = deviceProp.multiProcessorCount;
         unsigned int warpSize = deviceProp.warpSize;
         unsigned int nThreads = smCount*warpSize;

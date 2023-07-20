@@ -7,6 +7,8 @@
 
 #include "Graph/Graph.h"
 
+#include "CudaError/CudaError.h"
+
 namespace Bfs
 {
     namespace
@@ -23,7 +25,9 @@ namespace Bfs
             cudaTextureDesc texDesc;
             memset(&texDesc, 0, sizeof(texDesc));
             texDesc.readMode = cudaReadModeElementType;
-            cudaCreateTextureObject(dst, &resourceDesc, &texDesc, NULL);
+            CudaErrorCheck(
+                cudaCreateTextureObject(dst, &resourceDesc, &texDesc, NULL)
+            );
         }
 
         __global__
@@ -87,48 +91,81 @@ namespace Bfs
         textureMemForEdgesOffsets_(textureMemForEdgesOffsets),
         textureMemForEdges_(textureMemForEdges)
     {
-        cudaMalloc(&edgeOffsetsDevice_, sizeof(unsigned int)*graph.edgeOffsets.size());
-        cudaMemcpy(edgeOffsetsDevice_, graph.edgeOffsets.data(), sizeof(unsigned int)*graph.edgeOffsets.size(), cudaMemcpyKind::cudaMemcpyHostToDevice);
+
+        CudaErrorCheck(cudaMalloc(
+            &edgeOffsetsDevice_,
+            sizeof(unsigned int)*graph.edgeOffsets.size()
+        ));
+        CudaErrorCheck(cudaMemcpy(
+                edgeOffsetsDevice_,
+                graph.edgeOffsets.data(),
+                sizeof(unsigned int)*graph.edgeOffsets.size(), 
+                cudaMemcpyKind::cudaMemcpyHostToDevice
+        ));
         if(textureMemForEdgesOffsets_){
             memset(&edgeOffsetsTexture_, 0, sizeof(cudaTextureObject_t));
-            createTextureObject(edgeOffsetsDevice_, &edgeOffsetsTexture_, graph.edgeOffsets.size());
+            createTextureObject(
+                    edgeOffsetsDevice_,
+                    &edgeOffsetsTexture_,
+                    graph.edgeOffsets.size()
+            );
         }
 
-        cudaMalloc(&edgesDevice_, sizeof(unsigned int)*graph.edges.size());
-        cudaMemcpy(edgesDevice_, graph.edges.data(), sizeof(unsigned int)*graph.edges.size(), cudaMemcpyKind::cudaMemcpyHostToDevice);
+        CudaErrorCheck(
+            cudaMalloc(&edgesDevice_, sizeof(unsigned int)*graph.edges.size())
+        );
+        CudaErrorCheck(cudaMemcpy(
+            edgesDevice_,
+            graph.edges.data(),
+            sizeof(unsigned int)*graph.edges.size(),
+            cudaMemcpyKind::cudaMemcpyHostToDevice
+        ));
         if(textureMemForEdges_){
             memset(&edgesTexture_, 0, sizeof(cudaTextureObject_t));
-            createTextureObject(edgesDevice_, &edgesTexture_, graph.edges.size());
+            createTextureObject(
+                edgesDevice_,
+                &edgesTexture_,
+                graph.edges.size()
+            );
         }
 
-        cudaMalloc(&costsDevice_, sizeof(int)*graph.nVertices);
-        cudaMemset(costsDevice_, -1, sizeof(unsigned int)*graph.nVertices);
-        cudaMemset(costsDevice_ + source, 0, sizeof(unsigned int));
+        CudaErrorCheck(
+            cudaMalloc(&costsDevice_, sizeof(int)*graph.nVertices)
+        );
+        CudaErrorCheck(
+            cudaMemset(costsDevice_, -1, sizeof(unsigned int)*graph.nVertices)
+        );
+        CudaErrorCheck(
+            cudaMemset(costsDevice_ + source, 0, sizeof(unsigned int))
+        );
 
-        cudaMalloc(&doneDevice_, sizeof(bool));
-        cudaMemset(doneDevice_, true, sizeof(bool));
+        CudaErrorCheck(
+            cudaMalloc(&doneDevice_, sizeof(bool))
+        );
+        CudaErrorCheck(
+            cudaMemset(doneDevice_, true, sizeof(bool))
+        );
     }
 
     BfsCuda::~BfsCuda() 
-    {
-        cudaFree(edgeOffsetsDevice_);
-        cudaFree(edgesDevice_);
+    {   
+        CudaErrorCheck(cudaFree(edgeOffsetsDevice_));
+        CudaErrorCheck(cudaFree(edgesDevice_));
 
         if(textureMemForEdgesOffsets_){
-            cudaDestroyTextureObject(edgeOffsetsTexture_);
+            CudaErrorCheck(cudaDestroyTextureObject(edgeOffsetsTexture_));
         }
         if(textureMemForEdges_){
-            cudaDestroyTextureObject(edgesTexture_);
+            CudaErrorCheck(cudaDestroyTextureObject(edgesTexture_));
         }
 
-        cudaFree(costsDevice_);
-        cudaFree(doneDevice_);
+        CudaErrorCheck(cudaFree(costsDevice_));
+        CudaErrorCheck(cudaFree(doneDevice_));
     }
 
     bool BfsCuda::run()
     {
-        cudaMemset(doneDevice_, true, sizeof(bool));
-            
+        CudaErrorCheck(cudaMemset(doneDevice_, true, sizeof(bool)));
 
         const unsigned int blockSize = blockSize_;
         const unsigned int chunkSize = blockSize * chunkFactor_;
@@ -147,10 +184,16 @@ namespace Bfs
             currentCost,
             doneDevice_
         );
+        CudaKernelErrorCheck();
         
         currentCost++;
         bool done;
-        cudaMemcpy(&done, doneDevice_, sizeof(bool), cudaMemcpyKind::cudaMemcpyDeviceToHost);
+        CudaErrorCheck(cudaMemcpy(
+                &done,
+                doneDevice_,
+                sizeof(bool),
+                cudaMemcpyKind::cudaMemcpyDeviceToHost
+        ));
         return done;
     }
 
@@ -158,7 +201,12 @@ namespace Bfs
     {
         costsHost_.reserve(graph.nVertices);
         costsHost_.resize(costsHost_.capacity());
-        cudaMemcpy(costsHost_.data(), costsDevice_, sizeof(int)*graph.nVertices, cudaMemcpyKind::cudaMemcpyDeviceToHost);
+        CudaErrorCheck(cudaMemcpy(
+            costsHost_.data(),
+            costsDevice_,
+            sizeof(int)*graph.nVertices,
+            cudaMemcpyKind::cudaMemcpyDeviceToHost
+        ));
         return costsHost_;
     };
 }
