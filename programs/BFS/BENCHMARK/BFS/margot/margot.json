@@ -1,92 +1,92 @@
 {
-	"name": "BFSApp",
-	"version": "0.1",
-	"blocks":
-	[
-		{
-			"name": "bfs",
+    "name": "BFSApp",
+    "version": "0.1",
+    "blocks":
+    [
+        {
+            "name": "bfs",
 
-			"monitors":
-			[
-				{
-					"name": "time_monitor",
-					"type": "time",
-					"log": [ "average" ],
-					"constructor": [ "margot::TimeUnit::MICROSECONDS", 1 ]
-				}
-			],
-
-
-			"knobs":
-			[
-				{
-					"name": "GPU_BLOCK_EXP",
-					"type": "unsigned int",
-					"range": [0, 6, 1]
-				},
+            "monitors":
+            [
                 {
-					"name": "GPU_CHUNK_EXP",
-					"type": "unsigned int",
-					"range": [0, 4, 1]
-				},
-				{
-					"name": "GPU_OFFSETS_MEMORY",
-					"type": "unsigned int",
-					"range": [0, 2, 1]
-				},
-				{
-					"name": "GPU_EDGES_MEMORY",
-					"type": "unsigned int",
-					"range": [0, 2, 1]
-				}
-			],
+                    "name": "time_monitor",
+                    "type": "time",
+                    "log": [ "average" ],
+                    "constructor": [ "margot::TimeUnit::MICROSECONDS", 1 ]
+                }
+            ],
 
-			"feature_distance":"euclidean",
-			"features":
-			[
-				{
-					"name": "DEVICE_TYPE",
-					"type": "unsigned int",
-					"comparison": "-"
-				},
-				{
-					"name": "CPU_THREADS",
-					"type": "unsigned int",
-					"comparison": "-"
-				}
-			],
 
-			"metrics":
-			[
-				{
-					"name": "timing",
-					"type": "float",
-					"distribution": "yes",
-					"observed_by": "time_monitor",
-					"reactive_inertia": 0,
-          			"prediction_plugin": "model",
-          			"prediction_parameters": 
-					[
-            			{
-              				"quality_threshold": "{'r2':0.8}"
-            			}
-          			]
-				}
-			],
+            "knobs":
+            [
+                {
+                    "name": "GPU_BLOCK_EXP",
+                    "type": "unsigned int",
+                    "range": [0, 6, 1]
+                },
+                {
+                    "name": "GPU_CHUNK_EXP",
+                    "type": "unsigned int",
+                    "range": [0, 4, 1]
+                },
+                {
+                    "name": "GPU_OFFSETS_MEMORY",
+                    "type": "unsigned int",
+                    "range": [0, 2, 1]
+                },
+                {
+                    "name": "GPU_EDGES_MEMORY",
+                    "type": "unsigned int",
+                    "range": [0, 2, 1]
+                }
+            ],
 
-			"extra-functional_requirements":
-			[
-				{
-					"name":"default",
-					"minimize":
-					{
-						"geometric_mean":
-						[
-							{"timing": 1}
-						]
-					}
-				}
-			]
-		}
-	]
+            "feature_distance":"euclidean",
+            "features":
+            [
+                {
+                    "name": "DEVICE_TYPE",
+                    "type": "unsigned int",
+                    "comparison": "-"
+                },
+                {
+                    "name": "CPU_THREADS",
+                    "type": "unsigned int",
+                    "comparison": "-"
+                }
+            ],
+
+            "metrics":
+            [
+                {
+                    "name": "timing",
+                    "type": "float",
+                    "distribution": "yes",
+                    "observed_by": "time_monitor",
+                    "reactive_inertia": 0,
+                      "prediction_plugin": "model",
+                      "prediction_parameters": 
+                    [
+                        {
+                              "quality_threshold": "{'r2':0.8}"
+                        }
+                      ]
+                }
+            ],
+
+            "extra-functional_requirements":
+            [
+                {
+                    "name":"default",
+                    "minimize":
+                    {
+                        "geometric_mean":
+                        [
+                            {"timing": 1}
+                        ]
+                    }
+                }
+            ]
+        }
+    ]
 }
