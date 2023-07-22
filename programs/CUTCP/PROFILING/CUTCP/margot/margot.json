@@ -20,9 +20,53 @@
             "knobs":
             [
                 {
+                    "name": "INPUT_SIZE",
+                    "type": "unsigned int",
+                    "values": [ 512, 1024, 2048, 4096 ]
+                },
+                {
                     "name": "DEVICE_TYPE",
                     "type": "unsigned int",
                     "range": [ 0, 2, 1 ]
+                },
+                {
+                    "name": "CPU_FREQ",
+                    "type": "unsigned int",
+                    "values": [ 
+                        102000, 
+                        204000, 
+                        307200,    
+                        403200,
+                        518400,
+                        614400,
+                        710400,
+                        825600,
+                        921600,
+                        1036800,
+                        1132800,
+                        1224000,
+                        1326000,
+                        1428000,
+                        1479000
+                    ]
+                },
+                {
+                    "name": "GPU_FREQ",
+                    "type": "unsigned int",
+                    "values": [
+                        76800000,
+                        153600000,
+                        230400000,
+                        307200000,
+                        384000000,
+                        460800000,
+                        537600000,
+                        614400000,
+                        691200000,
+                        768000000,
+                        844800000,
+                        921600000                      
+                    ]
                 },
                 {
                     "name": "CPU_THREADS",
@@ -52,7 +96,7 @@
                 "client_key": "",
                 "number_configurations_per_iteration": 20000,
                 "number_observations_per_configuration": 1,
-                "max_number_iteration": 10,
+                "max_number_iteration": 1,
                 "clustering_plugin": "cluster",
                 "clustering_parameters":
                 [

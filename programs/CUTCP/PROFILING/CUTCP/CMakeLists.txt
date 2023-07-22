@@ -26,6 +26,9 @@ target_link_libraries(CUTCP_Profiling
         CUTCP_Knobs_LIB
 )
 
+# Add Common Library
+target_link_libraries(CUTCP_Profiling PUBLIC COMMON_Dvfs_Lib)
+
 # Add Margot Library
 get_filename_component(MARGOT_JSON "margot/margot.json" ABSOLUTE)
 margot_heel_generate_interface("${MARGOT_JSON}")
