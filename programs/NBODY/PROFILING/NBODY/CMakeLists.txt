@@ -25,6 +25,9 @@ target_link_libraries(NBODY_Profiling
         NBODY_Knobs_LIB
 )
 
+# Add Common Library
+target_link_libraries(NBODY_Profiling PUBLIC COMMON_Dvfs_Lib)
+
 # Add Margot Library
 get_filename_component(MARGOT_JSON "margot/margot.json" ABSOLUTE)
 margot_heel_generate_interface("${MARGOT_JSON}")
