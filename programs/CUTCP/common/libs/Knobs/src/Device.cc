@@ -35,4 +35,9 @@ namespace Knobs
         blockSize{blockSize},
         DeviceKnobs(DEVICE::GPU) 
     {};
+
+
+    GpuKnobs::BLOCK_SIZE blockSizefromExponent(unsigned int exp){
+        return static_cast<GpuKnobs::BLOCK_SIZE>( 32 * (2 << exp));
+    };
 }

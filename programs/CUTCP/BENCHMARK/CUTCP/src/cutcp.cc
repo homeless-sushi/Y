@@ -216,7 +216,5 @@ void CastKnobs(
     Knobs::GpuKnobs::BLOCK_SIZE& gpuBlockSize
 )
 {
-    gpuBlockSize = static_cast<Knobs::GpuKnobs::BLOCK_SIZE>(
-        Knobs::GpuKnobs::BLOCK_32 << gpuBlockSizeExp
-    );
+    gpuBlockSize = Knobs::blockSizefromExponent(gpuBlockSizeExp);
 }

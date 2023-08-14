@@ -46,6 +46,8 @@ namespace Knobs
 
             GpuKnobs(BLOCK_SIZE BLOCK_SIZE);
     };
+
+    GpuKnobs::BLOCK_SIZE blockSizefromExponent(unsigned int exp);
 }
 
 #endif //CUTCP_KNOBS_DEVICE_H
