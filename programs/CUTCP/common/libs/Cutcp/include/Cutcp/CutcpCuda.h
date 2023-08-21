@@ -47,10 +47,16 @@ namespace CutcpCuda
                 std::swap(zNCells, other.zNCells);
                 std::swap(nCells, other.nCells);
                 std::swap(owner, other.owner);
+
+                std::swap(dataUploadTime, other.dataUploadTime);
             }
+
+            float getDataUploadTime() { return dataUploadTime; };
 
         private:
             bool owner;
+
+            float dataUploadTime;
     };
 
     class LatticeCuda 
@@ -111,6 +117,10 @@ namespace CutcpCuda
             void run() override;
             Lattice::Lattice getResult() override;
 
+            float getDataUploadTime() { return dataUploadTime; }
+            float getKernelTime() { return kernelTime; }
+            float getDataDownloadTime() { return dataDownloadTime; }
+
         private:
             Lattice::Lattice lattice;
             const std::vector<Atom::Atom> atoms;
@@ -121,6 +131,10 @@ namespace CutcpCuda
             AtomsCrs atomCrs;
 
             unsigned int blockSize;
+
+            float dataUploadTime = 0;
+            float kernelTime = 0;
+            float dataDownloadTime = 0;
     };
 }
 

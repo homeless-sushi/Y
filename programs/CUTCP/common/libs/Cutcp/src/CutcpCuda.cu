@@ -62,8 +62,17 @@ namespace CutcpCuda
 
         CudaErrorCheck(cudaMalloc(&atomsValues, sizeof(Atom::Atom)*atomsValuesHost.size()));
         CudaErrorCheck(cudaMalloc(&cellIndexes, sizeof(long)*cellIndexesHost.size()));
+        cudaEvent_t start, stop;
+        cudaEventCreate(&start);
+        cudaEventCreate(&stop);
+        cudaEventRecord(start);
         CudaErrorCheck(cudaMemcpy(atomsValues, atomsValuesHost.data(), sizeof(Atom::Atom)*atomsValuesHost.size(), cudaMemcpyHostToDevice));
         CudaErrorCheck(cudaMemcpy(cellIndexes, cellIndexesHost.data(), sizeof(long)*cellIndexesHost.size(), cudaMemcpyHostToDevice));
+        cudaEventRecord(stop);
+        cudaDeviceSynchronize();
+        cudaEventElapsedTime(&dataUploadTime, start, stop);
+        cudaEventDestroy(start);
+        cudaEventDestroy(stop);
     };
 
     AtomsCrs::AtomsCrs(const AtomsCrs& owner) :
@@ -74,7 +83,8 @@ namespace CutcpCuda
         xNCells{owner.xNCells},
         yNCells{owner.yNCells},
         zNCells{owner.zNCells},
-        nCells{owner.nCells}
+        nCells{owner.nCells},
+        dataUploadTime{owner.dataUploadTime}
     {};
 
     AtomsCrs::~AtomsCrs()
@@ -142,18 +152,28 @@ namespace CutcpCuda
         exclusionCutoff{exclusionCutoff},
         blockSize{blockSize},
         latticeCuda{lattice,atoms},
-        atomCrs{lattice,atoms}
+        atomCrs{lattice,atoms},
+        dataUploadTime{atomCrs.getDataUploadTime()}
     {};
 
     CutcpCuda::~CutcpCuda(){};
 
     Lattice::Lattice CutcpCuda::getResult(){
+        cudaEvent_t start, stop;
+        cudaEventCreate(&start);
+        cudaEventCreate(&stop);
+        cudaEventRecord(start);
         CudaErrorCheck(cudaMemcpy(
             lattice.points.data(),
             latticeCuda.points,
             sizeof(float)*lattice.points.size(),
             cudaMemcpyDeviceToHost
         ));
+        cudaEventRecord(stop);
+        cudaDeviceSynchronize();
+        cudaEventElapsedTime(&dataDownloadTime, start, stop);
+        cudaEventDestroy(start);
+        cudaEventDestroy(stop);
         return lattice;
     };
     
@@ -308,6 +328,10 @@ namespace CutcpCuda
         cudaDeviceProp deviceProp;
         CudaErrorCheck(cudaGetDeviceProperties(&deviceProp, 0));
         unsigned int smCount = deviceProp.multiProcessorCount;
+        cudaEvent_t start, stop;
+        cudaEventCreate(&start);
+        cudaEventCreate(&stop);
+        cudaEventRecord(start);
         cutoffPotential<<<smCount,blockSize,blockSize*sizeof(float)>>>(
             atomCrs,
             latticeCuda,
@@ -320,6 +344,11 @@ namespace CutcpCuda
             exclusionCutoff
         );
         CudaKernelErrorCheck();
+        cudaEventRecord(stop);
+        cudaDeviceSynchronize();
+        cudaEventElapsedTime(&kernelTime, start, stop);
+        cudaEventDestroy(start);
+        cudaEventDestroy(stop);
         CudaErrorCheck(cudaDeviceSynchronize());
     };
 }
