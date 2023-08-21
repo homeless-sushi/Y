@@ -44,7 +44,8 @@ namespace Dummy
         }
 
         for (const float datapoint : data){
-            outFile << datapoint << std::endl;
+            outFile << datapoint << "\n";
         }
+        outFile << std::endl;
     }
 }

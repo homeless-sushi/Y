@@ -60,11 +60,12 @@ namespace Nbody
         }
 
         outFile << std::fixed << std::setprecision(6);
-        outFile << simTime << " " << timeStep << std::endl;
+        outFile << simTime << " " << timeStep << "\n";
         for (const auto& body : bodies){
             outFile << body.pos.x << " " << body.pos.y << " " << body.pos.z
-                << " " << body.vel.x << " " << body.vel.y << " " << body.vel.z << std::endl;
+                << " " << body.vel.x << " " << body.vel.y << " " << body.vel.z << "\n";
         }
+        outFile << std::endl;
     }
 
     void WriteCSVFile(
@@ -83,15 +84,16 @@ namespace Nbody
         }
 
         outFile << std::fixed << std::setprecision(6);
-        outFile << "# " << "target simulation time: " << targetSimTime << std::endl;
-        outFile << "# " << "target time step: " << targetTimeStep << std::endl;
-        outFile << "# " << "actual simulation time: " << actualSimTime << std::endl;
-        outFile << "# " << "actual time step: " << actualTimeStep << std::endl;
-        outFile << "# " << "precision: " << precision << std::endl;
-        outFile << "X, Y, Z, VX, VY, VZ" << std::endl;
+        outFile << "# " << "target simulation time: " << targetSimTime << "\n";
+        outFile << "# " << "target time step: " << targetTimeStep << "\n";
+        outFile << "# " << "actual simulation time: " << actualSimTime << "\n";
+        outFile << "# " << "actual time step: " << actualTimeStep << "\n";
+        outFile << "# " << "precision: " << precision << "\n";
+        outFile << "X, Y, Z, VX, VY, VZ" << "\n";
         for (const auto& body : bodies){
             outFile << body.pos.x << ", " << body.pos.y << ", " << body.pos.z
-                << ", " << body.vel.x << ", " << body.vel.y << ", " << body.vel.z << std::endl;
+                << ", " << body.vel.x << ", " << body.vel.y << ", " << body.vel.z << "\n";
         }
+        outFile << std::endl;
     }
 }

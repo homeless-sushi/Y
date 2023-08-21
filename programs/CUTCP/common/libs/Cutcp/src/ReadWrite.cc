@@ -19,7 +19,8 @@ namespace Cutcp
         
         outFile << std::fixed << std::setprecision(6);
         for (const auto& potential : lattice.points){
-            outFile << potential << std::endl;
+            outFile << potential << "\n";
         }
+        std::cout << std::endl;
     }
 }
