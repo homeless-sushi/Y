@@ -1,8 +1,7 @@
 #include <iostream>
+#include <chrono>
 #include <memory>
-#include <sstream>
 #include <string>
-#include <thread>
 #include <vector>
 
 #include "Nbody/Body.h"
@@ -13,23 +12,11 @@
 #include "Knobs/Device.h"
 #include "Knobs/Precision.h"
 
-#include <Dvfs/Dvfs.h>
-
 #include <boost/program_options.hpp>
-
-#include <margot/margot.hpp>
 
 namespace po = boost::program_options;
 
 po::options_description SetupOptions();
-void CastKnobs(
-    unsigned int deviceId,
-    unsigned int gpuBlockSizeExp,
-    unsigned int inputSize,
-    Knobs::DEVICE& device,
-    Knobs::GpuKnobs::BLOCK_SIZE& gpuBlockSize,
-    std::string& inputUrl
-);
 
 int main(int argc, char *argv[])
 {
@@ -42,95 +29,87 @@ int main(int argc, char *argv[])
         return 0;
     }
 
-    margot::init();
-    margot::nbody::context().manager.wait_for_knowledge(10);
+    const auto appStart = std::chrono::system_clock::now();
+    const auto inputStart = appStart;
 
-    unsigned int deviceId = 0;
-    unsigned int gpuBlockSizeExp = 0;
-    unsigned int inputSize = 512;
+    std::string inputFileURL(vm["input-file"].as<std::string>());
+
+    std::vector<Nbody::Body> bodies;
+    float targetSimulationTime;
+    float targetTimeStep;
+    Nbody::ReadBodyFile(inputFileURL, bodies, targetSimulationTime, targetTimeStep);
+
+    const auto inputStop = std::chrono::system_clock::now();
     
-    Knobs::DEVICE device;
-    Knobs::GpuKnobs::BLOCK_SIZE gpuBlockSize;
-    std::string inputUrl;
 
-    unsigned int cpuFreq = Dvfs::CPU_FRQ::FRQ_102000KHz;
-    unsigned int gpuFreq = Dvfs::GPU_FRQ::FRQ_76800000Hz;
-    unsigned int cpuThreads = 1;
-    unsigned int precision = 1;
-
-    CastKnobs(
-        deviceId,
-        gpuBlockSizeExp,
-        inputSize,
-        device,
-        gpuBlockSize,
-        inputUrl
+    unsigned int precision = vm["precision"].as<unsigned int>();
+    float actualTimeStep = targetTimeStep;
+    float approximateSimulationTime = Knobs::GetApproximateSimTime(
+        targetSimulationTime, 
+        targetTimeStep,
+        precision
     );
 
-    while(margot::nbody::context().manager.in_design_space_exploration()){
+    Knobs::DEVICE device = vm["gpu"].as<bool>() ? Knobs::DEVICE::GPU : Knobs::DEVICE::CPU;
+    unsigned int cpuThreads = vm["cpu-threads"].as<unsigned int>();
+    unsigned int gpuBlockSize = 32 * (2 << vm["gpu-block-exp"].as<unsigned int>());
 
-        if(margot::nbody::update(
-            cpuFreq,
-            cpuThreads,
-            deviceId,
-            gpuBlockSizeExp,
-            gpuFreq,
-            inputSize,
-            precision))
-        {
-            CastKnobs(
-                deviceId,
-                gpuBlockSizeExp,
-                inputSize,
-                device,
-                gpuBlockSize,
-                inputUrl
-            );
-            margot::nbody::context().manager.configuration_applied();
-        }
+    std::unique_ptr<Nbody::Nbody> nbody( 
+        device == Knobs::DEVICE::GPU ?
+        static_cast<Nbody::Nbody*>(new NbodyCuda::NbodyCuda(bodies, actualTimeStep, gpuBlockSize)) :
+        static_cast<Nbody::Nbody*>(new NbodyCpu::NbodyCpu(bodies, actualTimeStep, cpuThreads))
+    );
+    float actualSimulationTime;
+    for(actualSimulationTime = 0.f; actualSimulationTime < approximateSimulationTime; actualSimulationTime+=actualTimeStep){
+        nbody->run();
+    }
+    bodies = nbody->getResult();
 
-        Dvfs::SetCpuFreq(static_cast<Dvfs::CPU_FRQ>(cpuFreq));
-        Dvfs::SetGpuFreq(static_cast<Dvfs::GPU_FRQ>(gpuFreq));
-        std::this_thread::sleep_for(std::chrono::milliseconds(10));
+    const auto outputStart = std::chrono::system_clock::now();
 
-        margot::nbody::start_monitors();
-
-        std::vector<Nbody::Body> bodies;
-        float targetSimulationTime;
-        float targetTimeStep;
-        Nbody::ReadBodyFile(inputUrl, bodies, targetSimulationTime, targetTimeStep);
-
-        float actualTimeStep = targetTimeStep;
-        float approximateSimulationTime = Knobs::GetApproximateSimTime(
-            targetSimulationTime, 
+    if(vm.count("output-file")){
+        Nbody::WriteCSVFile(vm["output-file"].as<std::string>(), 
+            bodies,
+            targetSimulationTime,
             targetTimeStep,
+            actualSimulationTime,
+            actualTimeStep,
             precision
         );
-
-        std::unique_ptr<Nbody::Nbody> nbody( 
-            device == Knobs::DEVICE::GPU ?
-            static_cast<Nbody::Nbody*>(new NbodyCuda::NbodyCuda(bodies, actualTimeStep, gpuBlockSize)) :
-            static_cast<Nbody::Nbody*>(new NbodyCpu::NbodyCpu(bodies, actualTimeStep, cpuThreads))
-        );
-        float actualSimulationTime;
-        for(actualSimulationTime = 0.f; actualSimulationTime < targetSimulationTime; actualSimulationTime+=actualTimeStep){
-            nbody->run();
-        }
-        bodies = nbody->getResult();
-        
-        if(vm.count("output-file")){
-            Nbody::WriteBodyFile(vm["output-file"].as<std::string>(), 
-                bodies,
-                actualSimulationTime,
-                actualTimeStep
-            );
-        }
-
-        margot::nbody::stop_monitors();
-        margot::nbody::push_custom_monitor_values();
-        margot::nbody::log();
     }
 
+    const auto outputStop = std::chrono::system_clock::now();
+    auto appStop = std::chrono::system_clock::now();
+
+
+    auto appTotalTime = std::chrono::duration<double, std::milli>((appStop - appStart)).count();
+    auto inputTotalTime = std::chrono::duration<double, std::milli>((inputStop - inputStart)).count();
+    auto outputTotalTime = std::chrono::duration<double, std::milli>((outputStop - outputStart)).count();
+
+    std::cout << "APP_TIME " << appTotalTime << "\n"
+        << "INPUT_TIME " << inputTotalTime << "\n"
+        << "OUTPUT_TIME " << outputTotalTime << "\n";
+    
+    if(device == Knobs::DEVICE::GPU){
+
+        Nbody::Nbody* nbodyPointer(nbody.get());
+        nbody.release();
+        std::unique_ptr<NbodyCuda::NbodyCuda> nbodyCuda( 
+            dynamic_cast<NbodyCuda::NbodyCuda*>(nbodyPointer)
+        );
+
+        float dataUploadTime = nbodyCuda->getDataUploadTime();
+        float kernelTime = nbodyCuda->getKernelTime();
+        float dataDownloadTime = nbodyCuda->getDataDownloadTime();
+
+        std::cout << "GPU_UPLOAD_TIME " << dataUploadTime << "\n"
+            << "GPU_KERNEL_TIME " << kernelTime << "\n"
+            << "GPU_DOWNLOAD_TIME " << dataDownloadTime << "\n";
+
+    }
+
+    std::cout << std::endl;
+    
     return 0;
 }
 
@@ -139,26 +118,16 @@ po::options_description SetupOptions()
     po::options_description desc("Allowed options");
     desc.add_options()
     ("help", "Display help message")
+
+    ("input-file,I", po::value<std::string>(), "input file body file")
     ("output-file,O", po::value<std::string>(), "output file result file")
+
+    ("gpu", po::bool_switch(), "use gpu")
+    ("cpu-threads", po::value<unsigned int>()->default_value(1), "number of cpu threads")
+    ("gpu-block-exp", po::value<unsigned int>()->default_value(0), "block exp; block size = 32*2^X")
+
+    ("precision,P", po::value<unsigned int>()->default_value(100), "precision in range 0-100")
     ;
 
     return desc;
-}
-
-void CastKnobs(
-    unsigned int deviceId,
-    unsigned int gpuBlockSizeExp,
-    unsigned int inputSize,
-    Knobs::DEVICE& device,
-    Knobs::GpuKnobs::BLOCK_SIZE& gpuBlockSize,
-    std::string& inputUrl
-)
-{
-    device = static_cast<Knobs::DEVICE>(deviceId);
-    gpuBlockSize = static_cast<Knobs::GpuKnobs::BLOCK_SIZE>(
-        Knobs::GpuKnobs::BLOCK_32 << gpuBlockSizeExp
-    );
-    std::stringstream inputUrlStream;
-    inputUrlStream << "/home/miele/Vivian/Thesis/apps/Y/programs/NBODY/data/in/" << inputSize << ".txt";
-    inputUrl = inputUrlStream.str();
 }
