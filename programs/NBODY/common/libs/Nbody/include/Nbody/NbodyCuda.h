@@ -41,13 +41,23 @@ namespace NbodyCuda
                 std::swap(vy, other.vy);
                 std::swap(vz, other.vz);
                 std::swap(n, other.n);
+
                 std::swap(owner, other.owner);
+
+                std::swap(dataUploadTime, other.dataUploadTime);
+                std::swap(dataDownloadTime, other.dataDownloadTime);
             }
 
             std::vector<::Nbody::Body> getBodiesVector();
 
+            float getDataUploadTime() { return dataUploadTime; };
+            float getDataDownloadTime() { return dataDownloadTime; };
+            
         private:
             bool owner;
+
+            float dataUploadTime;
+            float dataDownloadTime;
     };
 
     class NbodyCuda : public Nbody::Nbody
@@ -62,6 +72,11 @@ namespace NbodyCuda
                 unsigned int blockSize
             );
             ~NbodyCuda() override;
+
+            float getDataUploadTime() { return dataUploadTime; }
+            float getKernelTime() { return kernelTotalTime; }
+            float getDataDownloadTime() { return dataDownloadTime; }
+
         private:
             unsigned long n;
             float dt;
@@ -69,6 +84,10 @@ namespace NbodyCuda
             BodySoa out;
 
             unsigned int blockSize;
+
+            float dataUploadTime = 0;
+            float kernelTotalTime = 0;
+            float dataDownloadTime = 0;
     };
 }
 

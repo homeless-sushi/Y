@@ -58,6 +58,10 @@ namespace NbodyCuda
         CudaErrorCheck(cudaMalloc(&vy, sizeof(float)*n));
         CudaErrorCheck(cudaMalloc(&vz, sizeof(float)*n));
 
+        cudaEvent_t start, stop;
+        cudaEventCreate(&start);
+        cudaEventCreate(&stop);
+        cudaEventRecord(start);
         CudaErrorCheck(
             cudaMemcpy(x, tmp_x, sizeof(float)*n, cudaMemcpyHostToDevice)
         );
@@ -76,6 +80,11 @@ namespace NbodyCuda
         CudaErrorCheck(
             cudaMemcpy(vz, tmp_vz, sizeof(float)*n, cudaMemcpyHostToDevice)
         );
+        cudaEventRecord(stop);
+        cudaDeviceSynchronize();
+        cudaEventElapsedTime(&dataUploadTime, start, stop);
+        cudaEventDestroy(start);
+        cudaEventDestroy(stop);
 
         free(tmp_x);
         free(tmp_y);
@@ -123,12 +132,21 @@ namespace NbodyCuda
         float* const tmp_vy = (float*) malloc(sizeof(float)*n);
         float* const tmp_vz = (float*) malloc(sizeof(float)*n);
 
+        cudaEvent_t start, stop;
+        cudaEventCreate(&start);
+        cudaEventCreate(&stop);
+        cudaEventRecord(start);
         cudaMemcpy(tmp_x, x, sizeof(float)*n, cudaMemcpyDeviceToHost);
         cudaMemcpy(tmp_y, y, sizeof(float)*n, cudaMemcpyDeviceToHost);
         cudaMemcpy(tmp_z, z, sizeof(float)*n, cudaMemcpyDeviceToHost);
         cudaMemcpy(tmp_vx, vx, sizeof(float)*n, cudaMemcpyDeviceToHost);
         cudaMemcpy(tmp_vy, vy, sizeof(float)*n, cudaMemcpyDeviceToHost);
         cudaMemcpy(tmp_vz, vz, sizeof(float)*n, cudaMemcpyDeviceToHost);
+        cudaEventRecord(stop);
+        cudaDeviceSynchronize();
+        cudaEventElapsedTime(&dataDownloadTime, start, stop);
+        cudaEventDestroy(start);
+        cudaEventDestroy(stop);
    
         std::vector<::Nbody::Body> bodies;
         bodies.reserve(n);
@@ -155,7 +173,8 @@ namespace NbodyCuda
         dt{timeStep},
         blockSize{blockSize},
         in{bodies},
-        out{n}
+        out{n},
+        dataUploadTime{in.getDataUploadTime()}
     {};
 
     NbodyCuda::~NbodyCuda() = default;
@@ -236,11 +255,27 @@ namespace NbodyCuda
     {
         const unsigned int blockDim_x = blockSize;
         const unsigned int gridDim_x = (n + blockDim_x - 1) / blockDim_x;
+        cudaEvent_t start, stop;
+        cudaEventCreate(&start);
+        cudaEventCreate(&stop);
+        cudaEventRecord(start);
         kernel<<<gridDim_x, blockDim_x, blockDim_x*sizeof(float)*3>>>(in, out, dt, n);
         CudaKernelErrorCheck();
+        cudaEventRecord(stop);
+        cudaDeviceSynchronize();
+        float kernelTime;
+        cudaEventElapsedTime(&kernelTime, start, stop);
+        kernelTotalTime+=kernelTime;
+        cudaEventDestroy(start);
+        cudaEventDestroy(stop);
         CudaErrorCheck(cudaDeviceSynchronize());
         in.swap(out);
     };
 
-    std::vector<::Nbody::Body> NbodyCuda::getResult(){ return in.getBodiesVector(); };
+    std::vector<::Nbody::Body> NbodyCuda::getResult()
+    {
+        std::vector<::Nbody::Body> res(in.getBodiesVector());
+        dataDownloadTime = in.getDataDownloadTime();
+        return res; 
+    };
 }
