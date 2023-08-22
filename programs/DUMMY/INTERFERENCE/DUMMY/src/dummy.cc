@@ -124,7 +124,7 @@ int main(int argc, char *argv[])
         //STOP: CONTROLLER PUSH
     }
 
-    std::cout << std::endl;
+    std::cout << std::endl; 
     registerDetach(data);
     return 0;
 }

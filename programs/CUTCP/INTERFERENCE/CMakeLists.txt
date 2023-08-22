@@ -8,7 +8,7 @@ endif()
 
 # Project name
 project(
-    DUMMY_Benchmark
+    CUTCP_Interference
     LANGUAGES CUDA CXX)
 
 # Enable debug with cuda-gdb
@@ -28,14 +28,12 @@ find_package(Boost REQUIRED
 ## find_package(Boost REQUIRED
 ##    COMPONENTS ALLL)
 
-# Find Margot
-
 # Run the CMake of these subdirectories
-add_subdirectory("DUMMY")
+add_subdirectory("CUTCP")
 
 # Add these out-of-tree subdirectories
-set(NBODY_COMMON_DIR "../common")
-add_subdirectory(${NBODY_COMMON_DIR} "common/nbody")
+set(CUTCP_COMMON_DIR "../common")
+add_subdirectory(${CUTCP_COMMON_DIR} "common/cutcp")
 set(PROJECT_COMMON_DIR "../../../common")
 add_subdirectory(${PROJECT_COMMON_DIR} "common/project")
 
