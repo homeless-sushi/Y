@@ -1,4 +1,5 @@
 #include <iostream>
+#include <chrono>
 #include <memory>
 #include <string>
 #include <vector>
@@ -29,10 +30,16 @@ bool stop = false;
 
 int main(int argc, char *argv[])
 {
-    std::cout << "EVENT,TYPE,DEVICE,TIMESTAMP" << "\n";
+    typedef std::result_of<decltype(&std::chrono::system_clock::now)()>::type TimePoint;
+    TimePoint startLoop, stopLoop;
+    TimePoint startTime, stopTime;
+    typedef std::chrono::duration<double, std::milli> Duration;
+    Duration duration;
+
+    std::cout << "PHASE,DEVICE,DURATION" << "\n";
  
     //START: SETUP
-    std::cout << "SETUP,START,CPU," << now() << "\n";
+    startTime = std::chrono::system_clock::now();
     po::options_description desc(SetupOptions());
     po::variables_map vm;
     po::store(po::parse_command_line(argc, argv, desc), vm);
@@ -52,35 +59,43 @@ int main(int argc, char *argv[])
         1,
         false);
     int dataSemId = semget(getpid(), 1, 0);
-
-    std::cout << "SETUP,STOP,CPU," << now() << "\n";
+    stopTime = std::chrono::system_clock::now();
+    duration = std::chrono::duration<double, std::milli>((stopTime - startTime));
+    std::cout << "SETUP,CPU," << duration.count() << "\n";
     //STOP: SETUP
 
     //Spinlock
     //START: WAIT REGISTRATION
-    std::cout << "WAIT REGISTRATION,START,CPU," << now() << "\n";
+    startTime = std::chrono::system_clock::now();
     while(true){
         if(isRegistered(data)){
             setTickStartTime(data);
             break;
         }
     }
-    std::cout << "WAIT REGISTRATION,STOP,CPU," << now() << "\n";
+    stopTime = std::chrono::system_clock::now();
+    duration = std::chrono::duration<double, std::milli>((stopTime - startTime));
+    std::cout << "WAIT REGISTRATION,CPU," << duration.count() << "\n";
     //STOP: WAIT REGISTRATION
 
     bool error = false;
     while(!stop && !error){
 
+        //START: LOOP
+        startLoop = std::chrono::system_clock::now();
+
         //Read knobs
         //START: CONTROLLER PULL
-        std::cout << "CONTROLLER PULL,START,CPU," << now() << "\n";
+        startTime = std::chrono::system_clock::now();
         error = binarySemaphoreWait(dataSemId);
         error = binarySemaphorePost(dataSemId);
-        std::cout << "CONTROLLER PULL,STOP,CPU," << now() << "\n";
+        stopTime = std::chrono::system_clock::now();
+        duration = std::chrono::duration<double, std::milli>((stopTime - startTime));
+        std::cout << "CONTROLLER PULL,CPU," << duration.count() << "\n";
         //STOP: CONTROLLER PULL
 
         //START: WIND UP
-        std::cout << "WIND UP,START,CPU," << now() << "\n";
+        startTime = std::chrono::system_clock::now();
         std::vector<float> fileData;
         std::string inputFileURL(vm["input-file"].as<std::string>());
         Dummy::ReadFile(inputFileURL, fileData);
@@ -94,34 +109,47 @@ int main(int argc, char *argv[])
         std::copy(fileData.begin(), fileData.begin() + nThreads, dummyData.begin());
 
         Dummy::Dummy dummy(dummyData, smCount, warpSize, vm["times"].as<unsigned int>());
-        std::cout << "WIND UP,STOP,CPU," << now() << "\n";
+        stopTime = std::chrono::system_clock::now();
+        duration = std::chrono::duration<double, std::milli>((stopTime - startTime));
+        std::cout << "WIND UP,CPU," << duration.count() << "\n";
         //STOP: WIND UP
 
         //START: KERNEL
-        std::cout << "KERNEL,START,GPU," << now() << "\n";
+        startTime = std::chrono::system_clock::now();
         dummy.run();
-        std::cout << "KERNEL,STOP,GPU," << now() << "\n";
+        stopTime = std::chrono::system_clock::now();
+        duration = std::chrono::duration<double, std::milli>((stopTime - startTime));
+        std::cout << "KERNEL,GPU," << duration.count() << "\n";
         //STOP: KERNEL
         
         //START: WIND DOWN
+        startTime = std::chrono::system_clock::now();
         dummyData = dummy.getResult();
-        std::cout << "WIND DOWN,START,CPU," << now() << "\n";
         if(vm.count("output-file")){
             std::string outputFileURL(vm["output-file"].as<std::string>());
             Dummy::WriteFile(outputFileURL, dummyData);
         }
-        std::cout << "WIND DOWN,STOP,CPU," << now() << "\n";
+        stopTime = std::chrono::system_clock::now();
+        duration = std::chrono::duration<double, std::milli>((stopTime - startTime));
+        std::cout << "WIND DOWN,CPU," << duration.count() << "\n";
         //START: WIND DOWN
 
         //Add tick
         //START: CONTROLLER PUSH
-        std::cout << "CONTROLLER PUSH,START,CPU," << now() << "\n";
+        startTime = std::chrono::system_clock::now();
         autosleep(data, targetThroughput);
         error = binarySemaphoreWait(dataSemId);
         addTick(data, 1);
         error = binarySemaphorePost(dataSemId);
-        std::cout << "CONTROLLER PUSH,STOP,CPU," << now() << "\n";
+        stopTime = std::chrono::system_clock::now();
+        duration = std::chrono::duration<double, std::milli>((stopTime - startTime));
+        std::cout << "CONTROLLER PUSH,CPU," << duration.count() << "\n";
         //STOP: CONTROLLER PUSH
+
+        //STOP: LOOP
+        stopLoop = std::chrono::system_clock::now();
+        duration = std::chrono::duration<double, std::milli>((stopLoop - startLoop));
+        std::cout << "LOOP,NONE," << duration.count() << "\n";
     }
 
     std::cout << std::endl; 

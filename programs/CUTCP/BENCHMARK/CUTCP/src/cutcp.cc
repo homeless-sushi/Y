@@ -1,4 +1,5 @@
 #include <iostream>
+#include <chrono>
 #include <memory>
 #include <string>
 
@@ -39,10 +40,16 @@ bool stop = false;
 
 int main(int argc, char *argv[])
 {
-    std::cout << "EVENT,TYPE,DEVICE,TIMESTAMP" << "\n";
+    typedef std::result_of<decltype(&std::chrono::system_clock::now)()>::type TimePoint;
+    TimePoint startLoop, stopLoop;
+    TimePoint startTime, stopTime;
+    typedef std::chrono::duration<double, std::milli> Duration;
+    Duration duration;
+
+    std::cout << "PHASE,DEVICE,DURATION" << "\n";
  
     //START: SETUP
-    std::cout << "SETUP,START,CPU," << now() << "\n";
+    startTime = std::chrono::system_clock::now();
     po::options_description desc(SetupOptions());
     po::variables_map vm;
     po::store(po::parse_command_line(argc, argv, desc), vm);
@@ -78,37 +85,46 @@ int main(int argc, char *argv[])
         gpuBlockSizeExp,
         gpuBlockSize
     );
-    std::cout << "SETUP,STOP,CPU," << now() << "\n";
+    stopTime = std::chrono::system_clock::now();
+    duration = std::chrono::duration<double, std::milli>((stopTime - startTime));
+    std::cout << "SETUP,CPU," << duration.count() << "\n";
     //STOP: SETUP
 
     //Spinlock
     //START: WAIT REGISTRATION
-    std::cout << "WAIT REGISTRATION,START,CPU," << now() << "\n";
+    startTime = std::chrono::system_clock::now();
     while(true){
         if(isRegistered(data)){
             setTickStartTime(data);
             break;
         }
     }
-    std::cout << "WAIT REGISTRATION,STOP,CPU," << now() << "\n";
+    stopTime = std::chrono::system_clock::now();
+    duration = std::chrono::duration<double, std::milli>((stopTime - startTime));
+    std::cout << "WAIT REGISTRATION,CPU," << duration.count() << "\n";
     //STOP: WAIT REGISTRATION
 
     bool error = false;
     while(!stop && !error){
 
+        //START: LOOP
+        startLoop = std::chrono::system_clock::now();
+
         //Read knobs
         //START: CONTROLLER PULL
-        std::cout << "CONTROLLER PULL,START,CPU," << now() << "\n";
+        startTime = std::chrono::system_clock::now();
         error = binarySemaphoreWait(dataSemId);
         cpuThreads = getNCpuCores(data);
         device = getUseGpu(data) ? Knobs::DEVICE::GPU : Knobs::DEVICE::CPU;
         error = binarySemaphorePost(dataSemId);
         deviceId = static_cast<unsigned int>(device);
-        std::cout << "CONTROLLER PULL,STOP,CPU," << now() << "\n";
+        stopTime = std::chrono::system_clock::now();
+        duration = std::chrono::duration<double, std::milli>((stopTime - startTime));
+        std::cout << "CONTROLLER PULL,CPU," << duration.count() << "\n";
         //STOP: CONTROLLER PULL
 
         //START: MARGOT PULL
-        std::cout << "MARGOT PULL,START,CPU," << now() << "\n";
+        startTime = std::chrono::system_clock::now();
         if(margot::cutcp::update(cpuThreads, deviceId, gpuBlockSizeExp, precision)){
             CastKnobs(
                 gpuBlockSizeExp,
@@ -117,11 +133,13 @@ int main(int argc, char *argv[])
             margot::cutcp::context().manager.configuration_applied();
         }
         margot::cutcp::start_monitors();
-        std::cout << "MARGOT PULL,STOP,CPU," << now() << "\n";
+        stopTime = std::chrono::system_clock::now();
+        duration = std::chrono::duration<double, std::milli>((stopTime - startTime));
+        std::cout << "MARGOT PULL,CPU," << duration.count() << "\n";
         //STOP: MARGOT PULL
 
         //START: WIND UP
-        std::cout << "WIND UP,START,CPU," << now() << "\n";
+        startTime = std::chrono::system_clock::now();
         std::string inputFileURL(vm["input-file"].as<std::string>());
         std::vector<Atom::Atom> atoms = Atom::ReadAtomFile(inputFileURL);
     
@@ -139,44 +157,64 @@ int main(int argc, char *argv[])
         float exclusionCutoff = 1.;
 
         std::unique_ptr<Cutcp::Cutcp> cutcp( 
-                device == Knobs::DEVICE::GPU ?
-                static_cast<Cutcp::Cutcp*>(new CutcpCuda::CutcpCuda(lattice, atoms, cutoff, exclusionCutoff, gpuBlockSize)) :
-                static_cast<Cutcp::Cutcp*>(new CutcpCpu::CutcpCpu(lattice, atoms, cutoff, exclusionCutoff, cpuThreads))
-            );
-        std::cout << "WIND UP,STOP,CPU," << now() << "\n";
+            device == Knobs::DEVICE::GPU ?
+            static_cast<Cutcp::Cutcp*>(new CutcpCuda::CutcpCuda(lattice, atoms, cutoff, exclusionCutoff, gpuBlockSize)) :
+            static_cast<Cutcp::Cutcp*>(new CutcpCpu::CutcpCpu(lattice, atoms, cutoff, exclusionCutoff, cpuThreads))
+        );
+        stopTime = std::chrono::system_clock::now();
+        duration = std::chrono::duration<double, std::milli>((stopTime - startTime));
+        std::cout << "WIND UP,CPU," << duration.count() << "\n";
         //STOP: WIND UP
 
         //START: KERNEL
-        std::cout << "KERNEL,START," << Knobs::DeviceToString(device) << "," << now() << "\n";
+        startTime = std::chrono::system_clock::now();
         cutcp->run();
-        std::cout << "KERNEL,STOP," << Knobs::DeviceToString(device) << "," << now() << "\n";
+        stopTime = std::chrono::system_clock::now();
+        if(device == Knobs::DEVICE::GPU){
+            CutcpCuda::CutcpCuda* ptr(dynamic_cast<CutcpCuda::CutcpCuda*>(cutcp.get()));
+            std::cout << "KERNEL,GPU," << ptr->getKernelTime() << "\n";
+        }else{
+            duration = std::chrono::duration<double, std::milli>((stopTime - startTime));
+            std::cout << "KERNEL,CPU," << duration.count() << "\n";
+        }
         //STOP: KERNEL
 
         //START: WIND DOWN
-        std::cout << "WIND DOWN,START,CPU," << now() << "\n";
+        startTime = std::chrono::system_clock::now();
         lattice = cutcp->getResult();
         if(vm.count("output-file")){
             Cutcp::WriteLattice(vm["output-file"].as<std::string>(), lattice);
         }
-        std::cout << "WIND DOWN,STOP,CPU," << now() << "\n";
+        stopTime = std::chrono::system_clock::now();
+        duration = std::chrono::duration<double, std::milli>((stopTime - startTime));
+        std::cout << "WIND DOWN,CPU," << duration.count() << "\n";
         //START: WIND DOWN
 
         //START: MARGOT PUSH
-        std::cout << "MARGOT PUSH,START,CPU," << now() << "\n";
+        startTime = std::chrono::system_clock::now();
         margot::cutcp::stop_monitors();
         margot::cutcp::push_custom_monitor_values();
-        std::cout << "MARGOT PUSH,STOP,CPU," << now() << "\n";
+        stopTime = std::chrono::system_clock::now();
+        duration = std::chrono::duration<double, std::milli>((stopTime - startTime));
+        std::cout << "MARGOT PUSH,CPU," << duration.count() << "\n";
         //STOP: MARGOT PUSH
         
         //Add tick
         //START: CONTROLLER PUSH
-        std::cout << "CONTROLLER PUSH,START,CPU," << now() << "\n";
+        startTime = std::chrono::system_clock::now();
         autosleep(data, targetThroughput);
         error = binarySemaphoreWait(dataSemId);
         addTick(data, 1);
         error = binarySemaphorePost(dataSemId);
-        std::cout << "CONTROLLER PUSH,STOP,CPU," << now() << "\n";
+        stopTime = std::chrono::system_clock::now();
+        duration = std::chrono::duration<double, std::milli>((stopTime - startTime));
+        std::cout << "CONTROLLER PUSH,CPU," << duration.count() << "\n";
         //STOP: CONTROLLER PUSH
+
+        //STOP: LOOP
+        stopLoop = std::chrono::system_clock::now();
+        duration = std::chrono::duration<double, std::milli>((stopLoop - startLoop));
+        std::cout << "LOOP,NONE," << duration.count() << "\n";
     }
 
     std::cout << std::endl;
