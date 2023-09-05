@@ -262,13 +262,12 @@ namespace NbodyCuda
         kernel<<<gridDim_x, blockDim_x, blockDim_x*sizeof(float)*3>>>(in, out, dt, n);
         CudaKernelErrorCheck();
         cudaEventRecord(stop);
-        cudaDeviceSynchronize();
+        CudaErrorCheck(cudaDeviceSynchronize());
         float kernelTime;
         cudaEventElapsedTime(&kernelTime, start, stop);
         kernelTotalTime+=kernelTime;
         cudaEventDestroy(start);
         cudaEventDestroy(stop);
-        CudaErrorCheck(cudaDeviceSynchronize());
         in.swap(out);
     };
 
