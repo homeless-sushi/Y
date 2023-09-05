@@ -133,8 +133,8 @@ int main(int argc, char *argv[])
 
         std::unique_ptr<Nbody::Nbody> nbody( 
             device == Knobs::DEVICE::GPU ?
-            static_cast<Nbody::Nbody*>(new NbodyCuda::NbodyCuda(bodies, actualTimeStep, gpuBlockSize)) :
-            static_cast<Nbody::Nbody*>(new NbodyCpu::NbodyCpu(bodies, actualTimeStep, cpuThreads))
+            static_cast<Nbody::Nbody*>(new NbodyCuda::NbodyCuda(bodies, targetSimulationTime, actualTimeStep, gpuBlockSize)) :
+            static_cast<Nbody::Nbody*>(new NbodyCpu::NbodyCpu(bodies, targetSimulationTime, actualTimeStep, cpuThreads))
         );
         stopTime = std::chrono::system_clock::now();
         duration = std::chrono::duration<double, std::milli>((stopTime - startTime));
@@ -152,10 +152,7 @@ int main(int argc, char *argv[])
 
         //START: KERNEL
         startTime = std::chrono::system_clock::now();
-        float actualSimulationTime;
-        for(actualSimulationTime = 0.f; actualSimulationTime < targetSimulationTime; actualSimulationTime+=actualTimeStep){
-            nbody->run();
-        }
+        nbody->run();
         stopTime = std::chrono::system_clock::now();
         if(device == Knobs::DEVICE::GPU){
             NbodyCuda::NbodyCuda* ptr(dynamic_cast<NbodyCuda::NbodyCuda*>(nbody.get()));
@@ -172,7 +169,7 @@ int main(int argc, char *argv[])
         if(vm.count("output-file")){
             Nbody::WriteBodyFile(vm["output-file"].as<std::string>(), 
                 bodies,
-                actualSimulationTime,
+                nbody->getSimulatedTime(),
                 actualTimeStep
             );
         }

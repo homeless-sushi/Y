@@ -13,6 +13,9 @@ add_library(NBODY_Nbody_LIB
 #        "src/ReadWrite.cc"
 #)
 
+# Enable CUDA Dynamic Parallelism
+set_property(TARGET NBODY_Nbody_LIB PROPERTY CUDA_SEPARABLE_COMPILATION ON)
+
 # Add to the include path
 target_include_directories(NBODY_Nbody_LIB 
     PUBLIC

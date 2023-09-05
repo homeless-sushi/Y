@@ -68,6 +68,7 @@ namespace NbodyCuda
             
             NbodyCuda(
                 const std::vector<::Nbody::Body>& bodies,
+                float simulationTime,
                 float timeStep,
                 unsigned int blockSize
             );
@@ -79,7 +80,6 @@ namespace NbodyCuda
 
         private:
             unsigned long n;
-            float dt;
             BodySoa in;
             BodySoa out;
 

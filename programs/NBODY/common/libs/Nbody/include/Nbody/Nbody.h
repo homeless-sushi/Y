@@ -13,9 +13,21 @@ namespace Nbody
     {
         public:
             virtual void run() = 0;
+            float getSimulatedTime() { return simulatedTime; } 
             virtual std::vector<Body> getResult() = 0;
             
             virtual ~Nbody() = default;
+
+        protected:
+
+            Nbody(float simulationTime, float timeStep) :
+                simulationTime{simulationTime},
+                timeStep{timeStep}
+            {};
+
+            float simulationTime = 0;
+            float simulatedTime = 0;
+            float timeStep;
     };
 }
 

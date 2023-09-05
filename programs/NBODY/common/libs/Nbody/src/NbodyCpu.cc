@@ -8,50 +8,54 @@ namespace NbodyCpu
 {
     void NbodyCpu::run()
     {
-        #pragma omp parallel for num_threads(nThreads)
-        for (auto current = bodies.begin(); current < bodies.end(); current++){
+        for(simulatedTime = 0; simulatedTime < simulationTime; simulatedTime+=timeStep){
 
-            float Fx = 0.0f; 
-            float Fy = 0.0f; 
-            float Fz = 0.0f;
+            #pragma omp parallel for num_threads(nThreads)
+            for (auto current = bodies.begin(); current < bodies.end(); current++){
 
-            for (auto other = bodies.begin(); other < bodies.end(); other++) {
-                const float dx = other->pos.x - current->pos.x;
-                const float dy = other->pos.y - current->pos.y;
-                const float dz = other->pos.z - current->pos.z;
+                float Fx = 0.0f; 
+                float Fy = 0.0f; 
+                float Fz = 0.0f;
 
-                const float distSqr = dx*dx + dy*dy + dz*dz + NBODY_SOFTENING;
-                const float invDist = 1/sqrtf(distSqr);
-                const float invDist3 = invDist * invDist * invDist;
+                for (auto other = bodies.begin(); other < bodies.end(); other++) {
+                    const float dx = other->pos.x - current->pos.x;
+                    const float dy = other->pos.y - current->pos.y;
+                    const float dz = other->pos.z - current->pos.z;
 
-                Fx += dx * invDist3;
-                Fy += dy * invDist3;
-                Fz += dz * invDist3;
+                    const float distSqr = dx*dx + dy*dy + dz*dz + NBODY_SOFTENING;
+                    const float invDist = 1/sqrtf(distSqr);
+                    const float invDist3 = invDist * invDist * invDist;
+
+                    Fx += dx * invDist3;
+                    Fy += dy * invDist3;
+                    Fz += dz * invDist3;
+                }
+
+                current->vel.x += timeStep*Fx; 
+                current->vel.y += timeStep*Fy; 
+                current->vel.z += timeStep*Fz;
             }
 
-            current->vel.x += dt*Fx; 
-            current->vel.y += dt*Fy; 
-            current->vel.z += dt*Fz;
-        }
+            #pragma parallel omp for num_threads(nThreads)
+            for (auto body = bodies.begin(); body < bodies.end(); body++){
+                body->pos.x += body->vel.x*timeStep; 
+                body->pos.y += body->vel.y*timeStep; 
+                body->pos.z += body->vel.z*timeStep;
+            }
 
-        #pragma parallel omp for num_threads(nThreads)
-        for (auto body = bodies.begin(); body < bodies.end(); body++){
-            body->pos.x += body->vel.x*dt; 
-            body->pos.y += body->vel.y*dt; 
-            body->pos.z += body->vel.z*dt;
         }
-
     }
 
     std::vector<::Nbody::Body> NbodyCpu::getResult() { return bodies; };
 
     NbodyCpu::NbodyCpu(
-        const std::vector<::Nbody::Body>& bodies, 
+        const std::vector<::Nbody::Body>& bodies,
+        float simulationTime,
         float timeStep,
         unsigned int nThreads
     ) :
+        Nbody::Nbody(simulationTime, timeStep),
         bodies{bodies},
-        dt{timeStep},
         nThreads{nThreads}
     {};
 }

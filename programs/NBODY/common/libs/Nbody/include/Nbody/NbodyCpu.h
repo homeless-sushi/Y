@@ -15,12 +15,13 @@ namespace NbodyCpu
             std::vector<::Nbody::Body> getResult() override;
             
             NbodyCpu(
-                const std::vector<::Nbody::Body>& bodies, 
+                const std::vector<::Nbody::Body>& bodies,
+                float simulationTime,
                 float timeStep,
                 unsigned int nThreads
             );
+
         private:
-            float dt;
             std::vector<::Nbody::Body> bodies;
             unsigned int nThreads;
     };

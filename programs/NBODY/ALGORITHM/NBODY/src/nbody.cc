@@ -49,13 +49,10 @@ int main(int argc, char *argv[])
 
     std::unique_ptr<Nbody::Nbody> nbody( 
         device == Knobs::DEVICE::GPU ?
-        static_cast<Nbody::Nbody*>(new NbodyCuda::NbodyCuda(bodies, actualTimeStep, gpuBlockSize)) :
-        static_cast<Nbody::Nbody*>(new NbodyCpu::NbodyCpu(bodies, actualTimeStep, cpuThreads))
+        static_cast<Nbody::Nbody*>(new NbodyCuda::NbodyCuda(bodies, targetSimulationTime, actualTimeStep, gpuBlockSize)) :
+        static_cast<Nbody::Nbody*>(new NbodyCpu::NbodyCpu(bodies, targetSimulationTime, actualTimeStep, cpuThreads))
     );
-    float actualSimulationTime;
-    for(actualSimulationTime = 0.f; actualSimulationTime < approximateSimulationTime; actualSimulationTime+=actualTimeStep){
-        nbody->run();
-    }
+    nbody->run();
     bodies = nbody->getResult();
 
     if(vm.count("output-file")){
@@ -63,7 +60,7 @@ int main(int argc, char *argv[])
             bodies,
             targetSimulationTime,
             targetTimeStep,
-            actualSimulationTime,
+            nbody->getSimulatedTime(),
             actualTimeStep,
             precision
         );
