@@ -21,12 +21,20 @@ namespace Sgemm
 
             void run();
             Matrix getResult();
-        
+
+            float getDataUploadTime() { return dataUploadTime; }
+            float getKernelTime() { return kernelTime; }
+            float getDataDownloadTime() { return dataDownloadTime; } 
+                   
         private:
             float* aDevice_;
             float* bDevice_;
             float* cDevice_;
             unsigned int tileSize_;
+
+            float dataUploadTime = 0;
+            float kernelTime = 0;
+            float dataDownloadTime = 0;
     };   
 }
 
