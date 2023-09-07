@@ -62,26 +62,14 @@ namespace NbodyCuda
         cudaEventCreate(&start);
         cudaEventCreate(&stop);
         cudaEventRecord(start);
-        CudaErrorCheck(
-            cudaMemcpy(x, tmp_x, sizeof(float)*n, cudaMemcpyHostToDevice)
-        );
-        CudaErrorCheck(
-            cudaMemcpy(y, tmp_y, sizeof(float)*n, cudaMemcpyHostToDevice)
-        );
-        CudaErrorCheck(
-            cudaMemcpy(z, tmp_z, sizeof(float)*n, cudaMemcpyHostToDevice)
-        );
-        CudaErrorCheck(
-            cudaMemcpy(vx, tmp_vx, sizeof(float)*n, cudaMemcpyHostToDevice)
-        );
-        CudaErrorCheck(
-            cudaMemcpy(vy, tmp_vy, sizeof(float)*n, cudaMemcpyHostToDevice)
-        );
-        CudaErrorCheck(
-            cudaMemcpy(vz, tmp_vz, sizeof(float)*n, cudaMemcpyHostToDevice)
-        );
+        cudaMemcpy(x, tmp_x, sizeof(float)*n, cudaMemcpyHostToDevice);
+        cudaMemcpy(y, tmp_y, sizeof(float)*n, cudaMemcpyHostToDevice);
+        cudaMemcpy(z, tmp_z, sizeof(float)*n, cudaMemcpyHostToDevice);
+        cudaMemcpy(vx, tmp_vx, sizeof(float)*n, cudaMemcpyHostToDevice);
+        cudaMemcpy(vy, tmp_vy, sizeof(float)*n, cudaMemcpyHostToDevice);
+        cudaMemcpy(vz, tmp_vz, sizeof(float)*n, cudaMemcpyHostToDevice);
         cudaEventRecord(stop);
-        cudaDeviceSynchronize();
+        cudaEventSynchronize(stop);
         cudaEventElapsedTime(&dataUploadTime, start, stop);
         cudaEventDestroy(start);
         cudaEventDestroy(stop);
@@ -143,7 +131,7 @@ namespace NbodyCuda
         cudaMemcpy(tmp_vy, vy, sizeof(float)*n, cudaMemcpyDeviceToHost);
         cudaMemcpy(tmp_vz, vz, sizeof(float)*n, cudaMemcpyDeviceToHost);
         cudaEventRecord(stop);
-        cudaDeviceSynchronize();
+        cudaEventSynchronize(stop);
         cudaEventElapsedTime(&dataDownloadTime, start, stop);
         cudaEventDestroy(start);
         cudaEventDestroy(stop);
@@ -295,12 +283,9 @@ namespace NbodyCuda
             out.x, out.y, out.z, out.vx, out.vy, out.vz,
             n
         );
-        CudaKernelErrorCheck();
         cudaEventRecord(stop);
-        CudaErrorCheck(cudaDeviceSynchronize());
-        float kernelTime;
+        cudaDeviceSynchronize();
         cudaEventElapsedTime(&kernelTime, start, stop);
-        kernelTotalTime+=kernelTime;
         cudaEventDestroy(start);
         cudaEventDestroy(stop);
 

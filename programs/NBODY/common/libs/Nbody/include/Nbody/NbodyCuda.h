@@ -75,7 +75,7 @@ namespace NbodyCuda
             ~NbodyCuda() override;
 
             float getDataUploadTime() { return dataUploadTime; }
-            float getKernelTime() { return kernelTotalTime; }
+            float getKernelTime() { return kernelTime; }
             float getDataDownloadTime() { return dataDownloadTime; }
 
         private:
@@ -86,7 +86,7 @@ namespace NbodyCuda
             unsigned int blockSize;
 
             float dataUploadTime = 0;
-            float kernelTotalTime = 0;
+            float kernelTime = 0;
             float dataDownloadTime = 0;
     };
 }
