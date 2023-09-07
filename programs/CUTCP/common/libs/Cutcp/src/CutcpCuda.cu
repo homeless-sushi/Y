@@ -66,10 +66,10 @@ namespace CutcpCuda
         cudaEventCreate(&start);
         cudaEventCreate(&stop);
         cudaEventRecord(start);
-        CudaErrorCheck(cudaMemcpy(atomsValues, atomsValuesHost.data(), sizeof(Atom::Atom)*atomsValuesHost.size(), cudaMemcpyHostToDevice));
-        CudaErrorCheck(cudaMemcpy(cellIndexes, cellIndexesHost.data(), sizeof(long)*cellIndexesHost.size(), cudaMemcpyHostToDevice));
+        cudaMemcpy(atomsValues, atomsValuesHost.data(), sizeof(Atom::Atom)*atomsValuesHost.size(), cudaMemcpyHostToDevice);
+        cudaMemcpy(cellIndexes, cellIndexesHost.data(), sizeof(long)*cellIndexesHost.size(), cudaMemcpyHostToDevice);
         cudaEventRecord(stop);
-        cudaDeviceSynchronize();
+        cudaEventSynchronize(stop);
         cudaEventElapsedTime(&dataUploadTime, start, stop);
         cudaEventDestroy(start);
         cudaEventDestroy(stop);
@@ -163,14 +163,14 @@ namespace CutcpCuda
         cudaEventCreate(&start);
         cudaEventCreate(&stop);
         cudaEventRecord(start);
-        CudaErrorCheck(cudaMemcpy(
+        cudaMemcpy(
             lattice.points.data(),
             latticeCuda.points,
             sizeof(float)*lattice.points.size(),
             cudaMemcpyDeviceToHost
-        ));
+        );
         cudaEventRecord(stop);
-        cudaDeviceSynchronize();
+        cudaEventSynchronize(stop);
         cudaEventElapsedTime(&dataDownloadTime, start, stop);
         cudaEventDestroy(start);
         cudaEventDestroy(stop);
@@ -337,18 +337,15 @@ namespace CutcpCuda
             latticeCuda,
             potentialCutoff
         );
-        CudaKernelErrorCheck();
         cutoffExclusion<<<smCount,blockSize,sizeof(bool)>>>(
             atomCrs,
             latticeCuda,
             exclusionCutoff
         );
-        CudaKernelErrorCheck();
         cudaEventRecord(stop);
         cudaDeviceSynchronize();
         cudaEventElapsedTime(&kernelTime, start, stop);
         cudaEventDestroy(start);
         cudaEventDestroy(stop);
-        CudaErrorCheck(cudaDeviceSynchronize());
     };
 }
