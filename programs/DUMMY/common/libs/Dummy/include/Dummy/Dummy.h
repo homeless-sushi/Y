@@ -19,6 +19,10 @@ namespace Dummy
 
             std::vector<float> getResult();
 
+            float getDataUploadTime() { return dataUploadTime; }
+            float getKernelTime() { return kernelTime; }
+            float getDataDownloadTime() { return dataDownloadTime; }
+
         private:
             std::vector<float> data;
             float* gpu_in;
@@ -27,6 +31,10 @@ namespace Dummy
             unsigned int gridLen;
             unsigned int blockLen;
             unsigned int times;
+
+            float dataUploadTime = 0;
+            float kernelTime = 0;
+            float dataDownloadTime = 0;
     };
 }
 

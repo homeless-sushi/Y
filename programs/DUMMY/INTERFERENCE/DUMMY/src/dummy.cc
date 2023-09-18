@@ -111,7 +111,10 @@ int main(int argc, char *argv[])
         Dummy::Dummy dummy(dummyData, smCount, warpSize, vm["times"].as<unsigned int>());
         stopTime = std::chrono::system_clock::now();
         duration = std::chrono::duration<double, std::milli>((stopTime - startTime));
-        std::cout << "WIND UP,CPU," << duration.count() << "\n";
+        double dataUploadTime = dummy.getDataUploadTime();
+        double windUpTime = duration.count() - dataUploadTime;
+        std::cout << "WIND UP,CPU," << windUpTime << "\n";
+        std::cout << "UPLOAD,GPU," << dataUploadTime<< "\n"; 
         //STOP: WIND UP
 
         //START: KERNEL
@@ -131,7 +134,10 @@ int main(int argc, char *argv[])
         }
         stopTime = std::chrono::system_clock::now();
         duration = std::chrono::duration<double, std::milli>((stopTime - startTime));
-        std::cout << "WIND DOWN,CPU," << duration.count() << "\n";
+        double dataDownloadTime = dummy.getDataDownloadTime();
+        double windDownTime = duration.count() - dataDownloadTime;
+        std::cout << "DOWNLOAD,GPU," << dataDownloadTime << "\n";
+        std::cout << "WIND DOWN,CPU," << windDownTime << "\n";
         //START: WIND DOWN
 
         //Add tick

@@ -21,14 +21,23 @@ namespace Dummy
         times{times}
     {
         CudaErrorCheck(cudaMalloc(&gpu_in, sizeof(float)*data.size()));
-        CudaErrorCheck(cudaMemcpy(
+        CudaErrorCheck(cudaMalloc(&gpu_out, sizeof(float)*data.size()));
+        cudaEvent_t start, stop;
+        cudaEventCreate(&start);
+        cudaEventCreate(&stop);
+        cudaEventRecord(start);
+        cudaMemcpy(
             gpu_in,
             data.data(),
             sizeof(float)*data.size(),
             cudaMemcpyHostToDevice
-        ));
-        CudaErrorCheck(cudaMalloc(&gpu_out, sizeof(float)*data.size()));
-        CudaErrorCheck(cudaMemset(gpu_out, 0, sizeof(float)*data.size()));
+        );
+        cudaMemset(gpu_out, 0, sizeof(float)*data.size());
+        cudaEventRecord(stop);
+        cudaEventSynchronize(stop);
+        cudaEventElapsedTime(&dataUploadTime, start, stop);
+        cudaEventDestroy(start);
+        cudaEventDestroy(stop);
     };
 
     Dummy::~Dummy()
@@ -39,12 +48,21 @@ namespace Dummy
 
     std::vector<float> Dummy::getResult()
     {
-        CudaErrorCheck(cudaMemcpy(
+        cudaEvent_t start, stop;
+        cudaEventCreate(&start);
+        cudaEventCreate(&stop);
+        cudaEventRecord(start);
+        cudaMemcpy(
             data.data(),
             gpu_out,
             sizeof(float)*data.size(),
             cudaMemcpyDeviceToHost
-        ));
+        );
+        cudaEventRecord(stop);
+        cudaEventSynchronize(stop);
+        cudaEventElapsedTime(&dataDownloadTime, start, stop);
+        cudaEventDestroy(start);
+        cudaEventDestroy(stop);
         return data;
     }
 
@@ -66,8 +84,15 @@ namespace Dummy
 
     void Dummy::run()
     {
+        cudaEvent_t start, stop;
+        cudaEventCreate(&start);
+        cudaEventCreate(&stop);
+        cudaEventRecord(start);
         dummyKernel<<<gridLen, blockLen>>>(gpu_in, gpu_out, data.size(), times);
-        CudaKernelErrorCheck();
-        CudaErrorCheck(cudaDeviceSynchronize());
+        cudaEventRecord(stop);
+        cudaDeviceSynchronize();
+        cudaEventElapsedTime(&kernelTime, start, stop);
+        cudaEventDestroy(start);
+        cudaEventDestroy(stop);
     };
 }
