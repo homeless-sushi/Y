@@ -8,7 +8,7 @@ endif()
 
 # Project name
 project(
-    CUTCP_Interference
+    CUTCP_GpuInterference
     LANGUAGES CUDA CXX)
 
 # Enable debug with cuda-gdb

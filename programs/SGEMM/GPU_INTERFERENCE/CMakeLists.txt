@@ -8,18 +8,13 @@ endif()
 
 # Project name
 project(
-    NBODY_Interference
+    SGEMM_GpuInterference
     LANGUAGES CUDA CXX)
 
 # Enable debug with cuda-gdb
 if(CMAKE_BUILD_TYPE STREQUAL "Debug")
     set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -g -G") 
 endif()
-
-# Support Dynamic Parallelism
-## minimum sm_35
-## Tegra TX1 supports sm_53
-set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} --gpu-architecture=sm_53")
 
 # Enable OpenMP on NVCC
 #set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -Xcompiler -fopenmp")
@@ -33,12 +28,17 @@ find_package(Boost REQUIRED
 ## find_package(Boost REQUIRED
 ##    COMPONENTS ALLL)
 
+# Find Margot
+set(eclipse-paho-mqtt-c_DIR $ENV{paho_DIR})
+set(margot_heel_generator_DIR $ENV{margot_heel_generator_DIR})
+find_package(margot_heel_generator REQUIRED)
+
 # Run the CMake of these subdirectories
-add_subdirectory("NBODY")
+add_subdirectory("SGEMM")
 
 # Add these out-of-tree subdirectories
-set(NBODY_COMMON_DIR "../common")
-add_subdirectory(${NBODY_COMMON_DIR} "common/nbody")
+set(SGEMM_COMMON_DIR "../common")
+add_subdirectory(${SGEMM_COMMON_DIR} "common/nbody")
 set(PROJECT_COMMON_DIR "../../../common")
 add_subdirectory(${PROJECT_COMMON_DIR} "common/project")
 
