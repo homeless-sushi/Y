@@ -8,7 +8,7 @@ endif()
 
 # Project name
 project(
-    SHA_Power
+    SHA_CpuPower
     LANGUAGES CUDA CXX)
 
 # Enable debug with cuda-gdb
