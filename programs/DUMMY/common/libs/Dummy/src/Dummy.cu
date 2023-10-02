@@ -82,6 +82,22 @@ namespace Dummy
         }
     };
 
+    __global__
+    void dummyInfinteKernel(float* in, float* out, unsigned int n)
+    {
+        unsigned int absolute_idx = blockDim.x * blockIdx.x + threadIdx.x;
+        unsigned int stride = gridDim.x * blockDim.x;
+
+        while(true){
+            for(int i = absolute_idx; i < n; i+=stride){
+                out[i]=in[i] * i;
+            }
+            for(int i = absolute_idx; i < n; i+=stride){
+                out[i]=in[i] / i;
+            }
+        }
+    };
+
     void Dummy::run()
     {
         cudaEvent_t start, stop;
@@ -89,6 +105,20 @@ namespace Dummy
         cudaEventCreate(&stop);
         cudaEventRecord(start);
         dummyKernel<<<gridLen, blockLen>>>(gpu_in, gpu_out, data.size(), times);
+        cudaEventRecord(stop);
+        cudaDeviceSynchronize();
+        cudaEventElapsedTime(&kernelTime, start, stop);
+        cudaEventDestroy(start);
+        cudaEventDestroy(stop);
+    };
+
+    void Dummy::runInfinite()
+    {
+        cudaEvent_t start, stop;
+        cudaEventCreate(&start);
+        cudaEventCreate(&stop);
+        cudaEventRecord(start);
+        dummyInfinteKernel<<<gridLen, blockLen>>>(gpu_in, gpu_out, data.size());
         cudaEventRecord(stop);
         cudaDeviceSynchronize();
         cudaEventElapsedTime(&kernelTime, start, stop);

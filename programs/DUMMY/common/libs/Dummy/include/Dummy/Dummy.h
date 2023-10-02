@@ -16,6 +16,7 @@ namespace Dummy
             );
             ~Dummy();
             void run();
+            void runInfinite();
 
             std::vector<float> getResult();
 
