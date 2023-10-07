@@ -169,11 +169,7 @@ namespace NbodyCuda
     NbodyCuda::~NbodyCuda() = default;
 
     __global__
-    void kernel(
-        float* in_x, float* in_y, float* in_z, float* in_vx, float* in_vy, float* in_vz,
-        float* out_x, float* out_y, float* out_z, float* out_vx, float* out_vy, float* out_vz, 
-        float dt, int n) 
-    {
+    void kernel(BodySoa p_in, BodySoa p_out, float dt, int n) {
         const int absoluteThreadIdx = blockIdx.x * blockDim.x + threadIdx.x;
         const int stride = blockDim.x * gridDim.x;
 
@@ -188,12 +184,12 @@ namespace NbodyCuda
             float Fz = 0.0f;
 
             //read thread's old_body data
-            const float old_x = in_x[i];
-            const float old_y = in_y[i];
-            const float old_z = in_z[i];
-            const float old_vx = in_vx[i];
-            const float old_vy = in_vy[i];
-            const float old_vz = in_vz[i];
+            const float old_x = p_in.x[i];
+            const float old_y = p_in.y[i];
+            const float old_z = p_in.z[i];
+            const float old_vx = p_in.vx[i];
+            const float old_vy = p_in.vy[i];
+            const float old_vz = p_in.vz[i];
 
             int n_blocks = (n + blockDim.x - 1) / blockDim.x;
             for(int curr_block = 0; curr_block < n_blocks; ++curr_block){
@@ -203,9 +199,9 @@ namespace NbodyCuda
                     break;
 
                 __syncthreads();
-                curr_block_x[threadIdx.x] = in_x[thread_offset];
-                curr_block_y[threadIdx.x] = in_y[thread_offset];
-                curr_block_z[threadIdx.x] = in_z[thread_offset];
+                curr_block_x[threadIdx.x] = p_in.x[thread_offset];
+                curr_block_y[threadIdx.x] = p_in.y[thread_offset];
+                curr_block_z[threadIdx.x] = p_in.z[thread_offset];
                 __syncthreads();
 
                 for(int j = 0; j < blockDim.x; ++j){
@@ -235,59 +231,35 @@ namespace NbodyCuda
             const float new_vx = old_vx + dt*Fx;
             const float new_vy = old_vy + dt*Fy;
             const float new_vz = old_vz + dt*Fz;
-            out_vx[i] = new_vx;
-            out_vy[i] = new_vy;
-            out_vz[i] = new_vz;
-            out_x[i] = old_x + new_vx*dt; 
-            out_y[i] = old_y + new_vy*dt; 
-            out_z[i] = old_z + new_vz*dt;
+            p_out.vx[i] = new_vx;
+            p_out.vy[i] = new_vy;
+            p_out.vz[i] = new_vz;
+            p_out.x[i] = old_x + new_vx*dt; 
+            p_out.y[i] = old_y + new_vy*dt; 
+            p_out.z[i] = old_z + new_vz*dt;
         }
     };
 
-    __global__ 
-    void simulation(
-        unsigned int blockDimX, 
-        float simTime, float dt, 
-        float* in_x, float* in_y, float* in_z, float* in_vx, float* in_vy, float* in_vz,
-        float* out_x, float* out_y, float* out_z, float* out_vx, float* out_vy, float* out_vz, 
-        int n
-    ){
-        const unsigned int gridDimX = (n + blockDimX - 1) / blockDimX;
-        for(float t = 0; t < simTime; t+=dt){
-            kernel<<<gridDimX, blockDimX, blockDimX*sizeof(float)*3>>>(
-                in_x, in_y, in_z, in_vx, in_vy, in_vz,
-                out_x, out_y, out_z, out_vx, out_vy, out_vz,
-                dt, n
-            );
-            cudaDeviceSynchronize();
-            float* tmp;
-            tmp = in_x; in_x = out_x; out_x = tmp;
-            tmp = in_y; in_y = out_y; out_y = tmp;
-            tmp = in_z; in_z = out_z; out_z = tmp;
-            tmp = in_vx; in_vx = out_vx; out_vx = tmp;
-            tmp = in_vy; in_vy = out_vy; out_vy = tmp;
-            tmp = in_vz; in_vz = out_vz; out_vz = tmp;
-        }
-    }
-
     void NbodyCuda::run()
     {
-        cudaEvent_t start, stop;
-        cudaEventCreate(&start);
-        cudaEventCreate(&stop);
-        cudaEventRecord(start);
-        simulation<<<1, 1, 0>>>(
-            blockSize,
-            simulationTime, timeStep, 
-            in.x, in.y, in.z, in.vx, in.vy, in.vz,
-            out.x, out.y, out.z, out.vx, out.vy, out.vz,
-            n
-        );
-        cudaEventRecord(stop);
-        cudaDeviceSynchronize();
-        cudaEventElapsedTime(&kernelTime, start, stop);
-        cudaEventDestroy(start);
-        cudaEventDestroy(stop);
+        const unsigned int blockDim_x = blockSize;
+        const unsigned int gridDim_x = (n + blockDim_x - 1) / blockDim_x;
+
+        for (float t = 0; t < simulationTime; t+=timeStep){
+            cudaEvent_t start, stop;
+            cudaEventCreate(&start);
+            cudaEventCreate(&stop);
+            cudaEventRecord(start);
+            kernel<<<gridDim_x, blockDim_x, blockDim_x*sizeof(float)*3>>>(in, out, timeStep, n);
+            cudaEventRecord(stop);
+            cudaDeviceSynchronize();
+            float kernelTime;
+            cudaEventElapsedTime(&kernelTime, start, stop);
+            kernelTotalTime+=kernelTime;
+            cudaEventDestroy(start);
+            cudaEventDestroy(stop);
+            in.swap(out);
+        }
 
         simulatedTime = timeStep * ceil(simulationTime/timeStep);
     };
