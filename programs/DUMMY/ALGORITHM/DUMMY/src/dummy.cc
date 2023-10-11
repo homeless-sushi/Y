@@ -13,6 +13,10 @@
 
 #include "CudaError/CudaError.h"
 
+#define SM_COUNT = 1
+#define SP_COUNT = 128
+#define WARP_SIZE = 32
+
 namespace po = boost::program_options;
 
 po::options_description SetupOptions();
@@ -35,9 +39,9 @@ int main(int argc, char *argv[])
 
     cudaDeviceProp deviceProp;
     CudaErrorCheck(cudaGetDeviceProperties(&deviceProp, 0));
-    unsigned int smCount = deviceProp.multiProcessorCount;
-    unsigned int warpSize = deviceProp.warpSize;
-    unsigned int nThreads = smCount*warpSize;
+    unsigned int smCount = SM_COUNT;//deviceProp.multiProcessorCount;
+    unsigned int warpSize = WARP_SIZE;//deviceProp.warpSize;
+    unsigned int nThreads = SP_COUNT;
     std::vector<float> dummyData(nThreads);
     std::copy(fileData.begin(), fileData.begin() + nThreads, dummyData.begin());
 
