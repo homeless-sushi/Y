@@ -150,16 +150,21 @@ int main(int argc, char *argv[])
 
 
         //START: KERNEL
-        startTime = std::chrono::system_clock::now();
-        sgemm->run();
-        stopTime = std::chrono::system_clock::now();
-        if(device == Knobs::DEVICE::GPU){
-            Sgemm::SgemmCuda* ptr(dynamic_cast<Sgemm::SgemmCuda*>(sgemm.get()));
-            std::cout << "KERNEL,GPU," << ptr->getKernelTime() << "\n";
-        }else{
-            duration = std::chrono::duration<double, std::milli>((stopTime - startTime));
-            std::cout << "KERNEL,CPU," << duration.count() << "\n";
+        double kernelTotalDuration = 0;
+        unsigned times = vm["times"].as<unsigned>();
+        for(unsigned i = 0; i < times; i++){
+            startTime = std::chrono::system_clock::now();
+            sgemm->run();
+            stopTime = std::chrono::system_clock::now();
+            if(device == Knobs::DEVICE::GPU){
+                Sgemm::SgemmCuda* ptr(dynamic_cast<Sgemm::SgemmCuda*>(sgemm.get()));
+                kernelTotalDuration += ptr->getKernelTime();
+            }else{
+                duration = std::chrono::duration<double, std::milli>((stopTime - startTime));
+                kernelTotalDuration += duration.count();
+            }
         }
+        std::cout << "KERNEL,CPU," << kernelTotalDuration << "\n";
         //STOP: KERNEL
 
         //START: WIND DOWN
@@ -213,6 +218,7 @@ po::options_description SetupOptions()
     ("output-file,O", po::value<std::string>(), "ouput file with result matrix")
     ("instance-name", po::value<std::string>()->default_value("SGEMM"), "name of benchmark instance")
     ("target-throughput", po::value<long double>()->default_value(1.0), "target throughput for the kernel")
+    ("times,T", po::value<unsigned int>()->default_value(1), "repeat the kernel T times")
     ;
 
     return desc;
