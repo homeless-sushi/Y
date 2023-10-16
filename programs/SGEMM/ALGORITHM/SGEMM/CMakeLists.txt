@@ -22,6 +22,7 @@ target_include_directories(SGEMM_Algorithm
 target_link_libraries(SGEMM_Algorithm
     PUBLIC
         SGEMM_Sgemm_LIB
+        SGEMM_Knobs_LIB
 )
 
 # Add Boost Libraries
