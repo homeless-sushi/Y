@@ -133,8 +133,8 @@ int main(int argc, char *argv[])
 
         std::unique_ptr<Nbody::Nbody> nbody( 
             device == Knobs::DEVICE::GPU ?
-            static_cast<Nbody::Nbody*>(new NbodyCuda::NbodyCuda(bodies, targetSimulationTime, actualTimeStep, gpuBlockSize)) :
-            static_cast<Nbody::Nbody*>(new NbodyCpu::NbodyCpu(bodies, targetSimulationTime, actualTimeStep, cpuThreads))
+            static_cast<Nbody::Nbody*>(new NbodyCuda::NbodyCuda(bodies, approximateSimulationTime, actualTimeStep, gpuBlockSize)) :
+            static_cast<Nbody::Nbody*>(new NbodyCpu::NbodyCpu(bodies, approximateSimulationTime, actualTimeStep, cpuThreads))
         );
         stopTime = std::chrono::system_clock::now();
         duration = std::chrono::duration<double, std::milli>((stopTime - startTime));
