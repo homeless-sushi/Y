@@ -98,56 +98,57 @@ int main(int argc, char *argv[])
     //STOP: WAIT REGISTRATION
 
     bool error = false;
+
+    //START: LOOP
+    startLoop = std::chrono::system_clock::now();
+
+    //Read knobs
+    //START: CONTROLLER PULL
+    startTime = std::chrono::system_clock::now();
+    error = binarySemaphoreWait(dataSemId);
+    cpuThreads = getNCpuCores(data);
+    device = getUseGpu(data) ? Knobs::DEVICE::GPU : Knobs::DEVICE::CPU;
+    error = binarySemaphorePost(dataSemId);
+    deviceId = static_cast<unsigned int>(device);
+    stopTime = std::chrono::system_clock::now();
+    duration = std::chrono::duration<double, std::milli>((stopTime - startTime));
+    std::cout << "CONTROLLER PULL,CPU," << duration.count() << "\n";
+    //STOP: CONTROLLER PULL
+
+    //START: WIND UP
+    startTime = std::chrono::system_clock::now();
+    std::string inputFileURL(vm["input-file"].as<std::string>());
+    std::vector<Nbody::Body> bodies;
+    float targetSimulationTime;
+    float targetTimeStep;
+    Nbody::ReadBodyFile(inputFileURL, bodies, targetSimulationTime, targetTimeStep);
+
+    float actualTimeStep = targetTimeStep;
+    float approximateSimulationTime = Knobs::GetApproximateSimTime(
+        targetSimulationTime, 
+        targetTimeStep,
+        precision
+    );
+
+    std::unique_ptr<Nbody::Nbody> nbody( 
+        device == Knobs::DEVICE::GPU ?
+        static_cast<Nbody::Nbody*>(new NbodyCuda::NbodyCuda(bodies, approximateSimulationTime, actualTimeStep, gpuBlockSize)) :
+        static_cast<Nbody::Nbody*>(new NbodyCpu::NbodyCpu(bodies, approximateSimulationTime, actualTimeStep, cpuThreads))
+    );
+    stopTime = std::chrono::system_clock::now();
+    duration = std::chrono::duration<double, std::milli>((stopTime - startTime));
+    if(device == Knobs::DEVICE::GPU){
+        NbodyCuda::NbodyCuda* ptr(dynamic_cast<NbodyCuda::NbodyCuda*>(nbody.get()));
+        double dataUploadTime = ptr->getDataUploadTime();
+        double windUpTime = duration.count() - dataUploadTime;
+        std::cout << "WIND UP,CPU," << windUpTime << "\n";
+        std::cout << "UPLOAD,GPU," << dataUploadTime << "\n";
+    }else{
+        std::cout << "WIND UP,CPU," << duration.count() << "\n";
+    }
+    //STOP: WIND UP
+
     while(!stop && !error){
-
-        //START: LOOP
-        startLoop = std::chrono::system_clock::now();
-
-        //Read knobs
-        //START: CONTROLLER PULL
-        startTime = std::chrono::system_clock::now();
-        error = binarySemaphoreWait(dataSemId);
-        cpuThreads = getNCpuCores(data);
-        device = getUseGpu(data) ? Knobs::DEVICE::GPU : Knobs::DEVICE::CPU;
-        error = binarySemaphorePost(dataSemId);
-        deviceId = static_cast<unsigned int>(device);
-        stopTime = std::chrono::system_clock::now();
-        duration = std::chrono::duration<double, std::milli>((stopTime - startTime));
-        std::cout << "CONTROLLER PULL,CPU," << duration.count() << "\n";
-        //STOP: CONTROLLER PULL
-
-        //START: WIND UP
-        startTime = std::chrono::system_clock::now();
-        std::string inputFileURL(vm["input-file"].as<std::string>());
-        std::vector<Nbody::Body> bodies;
-        float targetSimulationTime;
-        float targetTimeStep;
-        Nbody::ReadBodyFile(inputFileURL, bodies, targetSimulationTime, targetTimeStep);
-
-        float actualTimeStep = targetTimeStep;
-        float approximateSimulationTime = Knobs::GetApproximateSimTime(
-            targetSimulationTime, 
-            targetTimeStep,
-            precision
-        );
-
-        std::unique_ptr<Nbody::Nbody> nbody( 
-            device == Knobs::DEVICE::GPU ?
-            static_cast<Nbody::Nbody*>(new NbodyCuda::NbodyCuda(bodies, approximateSimulationTime, actualTimeStep, gpuBlockSize)) :
-            static_cast<Nbody::Nbody*>(new NbodyCpu::NbodyCpu(bodies, approximateSimulationTime, actualTimeStep, cpuThreads))
-        );
-        stopTime = std::chrono::system_clock::now();
-        duration = std::chrono::duration<double, std::milli>((stopTime - startTime));
-        if(device == Knobs::DEVICE::GPU){
-            NbodyCuda::NbodyCuda* ptr(dynamic_cast<NbodyCuda::NbodyCuda*>(nbody.get()));
-            double dataUploadTime = ptr->getDataUploadTime();
-            double windUpTime = duration.count() - dataUploadTime;
-            std::cout << "WIND UP,CPU," << windUpTime << "\n";
-            std::cout << "UPLOAD,GPU," << dataUploadTime << "\n";
-        }else{
-            std::cout << "WIND UP,CPU," << duration.count() << "\n";
-        }
-        //STOP: WIND UP
 
         //START: KERNEL
         startTime = std::chrono::system_clock::now();
@@ -161,47 +162,47 @@ int main(int argc, char *argv[])
             std::cout << "KERNEL,CPU," << duration.count() << "\n";
         }
         //STOP: KERNEL
-        
-        //START: WIND DOWN
-        startTime = std::chrono::system_clock::now();
-        bodies = nbody->getResult();
-        if(vm.count("output-file")){
-            Nbody::WriteBodyFile(vm["output-file"].as<std::string>(), 
-                bodies,
-                nbody->getSimulatedTime(),
-                actualTimeStep
-            );
-        }
-        stopTime = std::chrono::system_clock::now();
-        duration = std::chrono::duration<double, std::milli>((stopTime - startTime));
-        if(device == Knobs::DEVICE::GPU){
-            NbodyCuda::NbodyCuda* ptr(dynamic_cast<NbodyCuda::NbodyCuda*>(nbody.get()));
-            double dataDownloadTime = ptr->getDataDownloadTime();
-            double windDownTime = duration.count() - dataDownloadTime;
-            std::cout << "DOWNLOAD,GPU," << dataDownloadTime << "\n";
-            std::cout << "WIND DOWN,CPU," << windDownTime << "\n";
-        }else{
-            std::cout << "WIND DOWN,CPU," << duration.count() << "\n";
-        }
-        //START: WIND DOWN
-
-        //Add tick
-        //START: CONTROLLER PUSH
-        startTime = std::chrono::system_clock::now();
-        autosleep(data, targetThroughput);
-        error = binarySemaphoreWait(dataSemId);
-        addTick(data, 1);
-        error = binarySemaphorePost(dataSemId);
-        stopTime = std::chrono::system_clock::now();
-        duration = std::chrono::duration<double, std::milli>((stopTime - startTime));
-        std::cout << "CONTROLLER PUSH,CPU," << duration.count() << "\n";
-        //STOP: CONTROLLER PUSH
-        
-        //STOP: LOOP
-        stopLoop = std::chrono::system_clock::now();
-        duration = std::chrono::duration<double, std::milli>((stopLoop - startLoop));
-        std::cout << "LOOP,NONE," << duration.count() << "\n";
     }
+
+    //START: WIND DOWN
+    startTime = std::chrono::system_clock::now();
+    bodies = nbody->getResult();
+    if(vm.count("output-file")){
+        Nbody::WriteBodyFile(vm["output-file"].as<std::string>(), 
+            bodies,
+            nbody->getSimulatedTime(),
+            actualTimeStep
+        );
+    }
+    stopTime = std::chrono::system_clock::now();
+    duration = std::chrono::duration<double, std::milli>((stopTime - startTime));
+    if(device == Knobs::DEVICE::GPU){
+        NbodyCuda::NbodyCuda* ptr(dynamic_cast<NbodyCuda::NbodyCuda*>(nbody.get()));
+        double dataDownloadTime = ptr->getDataDownloadTime();
+        double windDownTime = duration.count() - dataDownloadTime;
+        std::cout << "DOWNLOAD,GPU," << dataDownloadTime << "\n";
+        std::cout << "WIND DOWN,CPU," << windDownTime << "\n";
+    }else{
+        std::cout << "WIND DOWN,CPU," << duration.count() << "\n";
+    }
+    //START: WIND DOWN
+
+    //Add tick
+    //START: CONTROLLER PUSH
+    startTime = std::chrono::system_clock::now();
+    autosleep(data, targetThroughput);
+    error = binarySemaphoreWait(dataSemId);
+    addTick(data, 1);
+    error = binarySemaphorePost(dataSemId);
+    stopTime = std::chrono::system_clock::now();
+    duration = std::chrono::duration<double, std::milli>((stopTime - startTime));
+    std::cout << "CONTROLLER PUSH,CPU," << duration.count() << "\n";
+    //STOP: CONTROLLER PUSH
+
+    //STOP: LOOP
+    stopLoop = std::chrono::system_clock::now();
+    duration = std::chrono::duration<double, std::milli>((stopLoop - startLoop));
+    std::cout << "LOOP,NONE," << duration.count() << "\n";
 
     std::cout << std::endl;
     registerDetach(data);

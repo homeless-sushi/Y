@@ -101,59 +101,60 @@ int main(int argc, char *argv[])
     //STOP: WAIT REGISTRATION
 
     bool error = false;
+
+    //START: LOOP
+    startLoop = std::chrono::system_clock::now();
+
+    //Read knobs
+    //START: CONTROLLER PULL
+    startTime = std::chrono::system_clock::now();
+    error = binarySemaphoreWait(dataSemId);
+    cpuThreads = getNCpuCores(data);
+    device = getUseGpu(data) ? Knobs::DEVICE::GPU : Knobs::DEVICE::CPU;
+    error = binarySemaphorePost(dataSemId);
+    deviceId = static_cast<unsigned int>(device);
+    stopTime = std::chrono::system_clock::now();
+    duration = std::chrono::duration<double, std::milli>((stopTime - startTime));
+    std::cout << "CONTROLLER PULL,CPU," << duration.count() << "\n";
+    //STOP: CONTROLLER PULL
+
+    //START: WIND UP
+    startTime = std::chrono::system_clock::now();
+    std::string inputFileURL(vm["input-file"].as<std::string>());
+    std::vector<Atom::Atom> atoms = Atom::ReadAtomFile(inputFileURL);
+
+    Vector::Vec3 minCoords;
+    Vector::Vec3 maxCoords;
+    Atom::GetAtomBounds(atoms, minCoords, maxCoords);
+    float padding = 0.5;
+    Vector::Vec3 paddingVec(padding);
+    minCoords = minCoords - paddingVec;
+    maxCoords = maxCoords + paddingVec;
+    float spacing = 0.5;
+    Lattice::Lattice lattice(minCoords, maxCoords, spacing);
+
+    float cutoff = Knobs::GetCutoff(minCoords, maxCoords, spacing, precision);
+    float exclusionCutoff = 1.;
+
+    std::unique_ptr<Cutcp::Cutcp> cutcp( 
+        device == Knobs::DEVICE::GPU ?
+        static_cast<Cutcp::Cutcp*>(new CutcpCuda::CutcpCuda(lattice, atoms, cutoff, exclusionCutoff, gpuBlockSize)) :
+        static_cast<Cutcp::Cutcp*>(new CutcpCpu::CutcpCpu(lattice, atoms, cutoff, exclusionCutoff, cpuThreads))
+    );
+    stopTime = std::chrono::system_clock::now();
+    duration = std::chrono::duration<double, std::milli>((stopTime - startTime));
+    if(device == Knobs::DEVICE::GPU){
+        CutcpCuda::CutcpCuda* ptr(dynamic_cast<CutcpCuda::CutcpCuda*>(cutcp.get()));
+        double dataUploadTime = ptr->getDataUploadTime();
+        double windUpTime = duration.count() - dataUploadTime;
+        std::cout << "WIND UP,CPU," << windUpTime << "\n";
+        std::cout << "UPLOAD,GPU," << dataUploadTime << "\n";
+    }else{
+        std::cout << "WIND UP,CPU," << duration.count() << "\n";
+    }
+    //STOP: WIND UP
+
     while(!stop && !error){
-
-        //START: LOOP
-        startLoop = std::chrono::system_clock::now();
-
-        //Read knobs
-        //START: CONTROLLER PULL
-        startTime = std::chrono::system_clock::now();
-        error = binarySemaphoreWait(dataSemId);
-        cpuThreads = getNCpuCores(data);
-        device = getUseGpu(data) ? Knobs::DEVICE::GPU : Knobs::DEVICE::CPU;
-        error = binarySemaphorePost(dataSemId);
-        deviceId = static_cast<unsigned int>(device);
-        stopTime = std::chrono::system_clock::now();
-        duration = std::chrono::duration<double, std::milli>((stopTime - startTime));
-        std::cout << "CONTROLLER PULL,CPU," << duration.count() << "\n";
-        //STOP: CONTROLLER PULL
-
-        //START: WIND UP
-        startTime = std::chrono::system_clock::now();
-        std::string inputFileURL(vm["input-file"].as<std::string>());
-        std::vector<Atom::Atom> atoms = Atom::ReadAtomFile(inputFileURL);
-    
-        Vector::Vec3 minCoords;
-        Vector::Vec3 maxCoords;
-        Atom::GetAtomBounds(atoms, minCoords, maxCoords);
-        float padding = 0.5;
-        Vector::Vec3 paddingVec(padding);
-        minCoords = minCoords - paddingVec;
-        maxCoords = maxCoords + paddingVec;
-        float spacing = 0.5;
-        Lattice::Lattice lattice(minCoords, maxCoords, spacing);
-
-        float cutoff = Knobs::GetCutoff(minCoords, maxCoords, spacing, precision);
-        float exclusionCutoff = 1.;
-
-        std::unique_ptr<Cutcp::Cutcp> cutcp( 
-            device == Knobs::DEVICE::GPU ?
-            static_cast<Cutcp::Cutcp*>(new CutcpCuda::CutcpCuda(lattice, atoms, cutoff, exclusionCutoff, gpuBlockSize)) :
-            static_cast<Cutcp::Cutcp*>(new CutcpCpu::CutcpCpu(lattice, atoms, cutoff, exclusionCutoff, cpuThreads))
-        );
-        stopTime = std::chrono::system_clock::now();
-        duration = std::chrono::duration<double, std::milli>((stopTime - startTime));
-        if(device == Knobs::DEVICE::GPU){
-            CutcpCuda::CutcpCuda* ptr(dynamic_cast<CutcpCuda::CutcpCuda*>(cutcp.get()));
-            double dataUploadTime = ptr->getDataUploadTime();
-            double windUpTime = duration.count() - dataUploadTime;
-            std::cout << "WIND UP,CPU," << windUpTime << "\n";
-            std::cout << "UPLOAD,GPU," << dataUploadTime << "\n";
-        }else{
-            std::cout << "WIND UP,CPU," << duration.count() << "\n";
-        }
-        //STOP: WIND UP
 
         //START: KERNEL
         startTime = std::chrono::system_clock::now();
@@ -167,43 +168,43 @@ int main(int argc, char *argv[])
             std::cout << "KERNEL,CPU," << duration.count() << "\n";
         }
         //STOP: KERNEL
-
-        //START: WIND DOWN
-        startTime = std::chrono::system_clock::now();
-        lattice = cutcp->getResult();
-        if(vm.count("output-file")){
-            Cutcp::WriteLattice(vm["output-file"].as<std::string>(), lattice);
-        }
-        stopTime = std::chrono::system_clock::now();
-        duration = std::chrono::duration<double, std::milli>((stopTime - startTime));
-        if(device == Knobs::DEVICE::GPU){
-            CutcpCuda::CutcpCuda* ptr(dynamic_cast<CutcpCuda::CutcpCuda*>(cutcp.get()));
-            double dataDownloadTime = ptr->getDataDownloadTime();
-            double windDownTime = duration.count() - dataDownloadTime;
-            std::cout << "DOWNLOAD,GPU," << dataDownloadTime << "\n";
-            std::cout << "WIND DOWN,CPU," << windDownTime << "\n";
-        }else{
-            std::cout << "WIND DOWN,CPU," << duration.count() << "\n";
-        }
-        //START: WIND DOWN
-        
-        //Add tick
-        //START: CONTROLLER PUSH
-        startTime = std::chrono::system_clock::now();
-        autosleep(data, targetThroughput);
-        error = binarySemaphoreWait(dataSemId);
-        addTick(data, 1);
-        error = binarySemaphorePost(dataSemId);
-        stopTime = std::chrono::system_clock::now();
-        duration = std::chrono::duration<double, std::milli>((stopTime - startTime));
-        std::cout << "CONTROLLER PUSH,CPU," << duration.count() << "\n";
-        //STOP: CONTROLLER PUSH
-
-        //STOP: LOOP
-        stopLoop = std::chrono::system_clock::now();
-        duration = std::chrono::duration<double, std::milli>((stopLoop - startLoop));
-        std::cout << "LOOP,NONE," << duration.count() << "\n";
     }
+
+    //START: WIND DOWN
+    startTime = std::chrono::system_clock::now();
+    lattice = cutcp->getResult();
+    if(vm.count("output-file")){
+        Cutcp::WriteLattice(vm["output-file"].as<std::string>(), lattice);
+    }
+    stopTime = std::chrono::system_clock::now();
+    duration = std::chrono::duration<double, std::milli>((stopTime - startTime));
+    if(device == Knobs::DEVICE::GPU){
+        CutcpCuda::CutcpCuda* ptr(dynamic_cast<CutcpCuda::CutcpCuda*>(cutcp.get()));
+        double dataDownloadTime = ptr->getDataDownloadTime();
+        double windDownTime = duration.count() - dataDownloadTime;
+        std::cout << "DOWNLOAD,GPU," << dataDownloadTime << "\n";
+        std::cout << "WIND DOWN,CPU," << windDownTime << "\n";
+    }else{
+        std::cout << "WIND DOWN,CPU," << duration.count() << "\n";
+    }
+    //START: WIND DOWN
+    
+    //Add tick
+    //START: CONTROLLER PUSH
+    startTime = std::chrono::system_clock::now();
+    autosleep(data, targetThroughput);
+    error = binarySemaphoreWait(dataSemId);
+    addTick(data, 1);
+    error = binarySemaphorePost(dataSemId);
+    stopTime = std::chrono::system_clock::now();
+    duration = std::chrono::duration<double, std::milli>((stopTime - startTime));
+    std::cout << "CONTROLLER PUSH,CPU," << duration.count() << "\n";
+    //STOP: CONTROLLER PUSH
+
+    //STOP: LOOP
+    stopLoop = std::chrono::system_clock::now();
+    duration = std::chrono::duration<double, std::milli>((stopLoop - startLoop));
+    std::cout << "LOOP,NONE," << duration.count() << "\n";
 
     std::cout << std::endl;
     registerDetach(data);

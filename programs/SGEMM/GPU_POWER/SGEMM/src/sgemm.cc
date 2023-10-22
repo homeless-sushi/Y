@@ -102,52 +102,51 @@ int main(int argc, char *argv[])
     //STOP: WAIT REGISTRATION
 
     bool error = false;
+
+    //START: LOOP
+    startLoop = std::chrono::system_clock::now();
+
+    //Read knobs
+    //START: CONTROLLER PULL
+    startTime = std::chrono::system_clock::now();
+    error = binarySemaphoreWait(dataSemId);
+    cpuThreads = getNCpuCores(data);
+    device = getUseGpu(data) ? Knobs::DEVICE::GPU : Knobs::DEVICE::CPU;
+    error = binarySemaphorePost(dataSemId);
+    deviceId = static_cast<unsigned int>(device);
+    stopTime = std::chrono::system_clock::now();
+    duration = std::chrono::duration<double, std::milli>((stopTime - startTime));
+    std::cout << "CONTROLLER PULL,CPU," << duration.count() << "\n";
+    //STOP: CONTROLLER PULL
+
+    //START: WIND UP
+    startTime = std::chrono::system_clock::now();
+    std::string inputAUrl(vm["input-file"].as<std::string>());
+    std::string inputBUrl(vm["input-file"].as<std::string>());
+    std::string inputCUrl(vm["input-file"].as<std::string>());
+    Sgemm::Matrix a(Sgemm::ReadMatrixFile(inputAUrl));
+    Sgemm::Matrix b(Sgemm::ReadMatrixFile(inputBUrl));
+    Sgemm::Matrix c(Sgemm::ReadMatrixFile(inputCUrl));
+
+    std::unique_ptr<Sgemm::Sgemm> sgemm( 
+        device == Knobs::DEVICE::GPU ?
+        static_cast<Sgemm::Sgemm*>(new Sgemm::SgemmCuda(1,1,a,b,c,gpuTileSize)) :
+        static_cast<Sgemm::Sgemm*>(new Sgemm::SgemmCpu(1,1,a,b,c,cpuThreads,cpuTileSize))
+    );
+    stopTime = std::chrono::system_clock::now();
+    duration = std::chrono::duration<double, std::milli>((stopTime - startTime));
+    if(device == Knobs::DEVICE::GPU){
+        Sgemm::SgemmCuda* ptr(dynamic_cast<Sgemm::SgemmCuda*>(sgemm.get()));
+        double dataUploadTime = ptr->getDataUploadTime();
+        double windUpTime = duration.count() - dataUploadTime;
+        std::cout << "WIND UP,CPU," << windUpTime << "\n";
+        std::cout << "UPLOAD,GPU," << dataUploadTime << "\n";
+    }else{
+        std::cout << "WIND UP,CPU," << duration.count() << "\n";
+    }
+    //STOP: WIND UP
+
     while(!stop && !error){
-
-        //START: LOOP
-        startLoop = std::chrono::system_clock::now();
-
-        //Read knobs
-        //START: CONTROLLER PULL
-        startTime = std::chrono::system_clock::now();
-        error = binarySemaphoreWait(dataSemId);
-        cpuThreads = getNCpuCores(data);
-        device = getUseGpu(data) ? Knobs::DEVICE::GPU : Knobs::DEVICE::CPU;
-        error = binarySemaphorePost(dataSemId);
-        deviceId = static_cast<unsigned int>(device);
-        stopTime = std::chrono::system_clock::now();
-        duration = std::chrono::duration<double, std::milli>((stopTime - startTime));
-        std::cout << "CONTROLLER PULL,CPU," << duration.count() << "\n";
-        //STOP: CONTROLLER PULL
-
-        //START: WIND UP
-        startTime = std::chrono::system_clock::now();
-        std::string inputAUrl(vm["input-file"].as<std::string>());
-        std::string inputBUrl(vm["input-file"].as<std::string>());
-        std::string inputCUrl(vm["input-file"].as<std::string>());
-        Sgemm::Matrix a(Sgemm::ReadMatrixFile(inputAUrl));
-        Sgemm::Matrix b(Sgemm::ReadMatrixFile(inputBUrl));
-        Sgemm::Matrix c(Sgemm::ReadMatrixFile(inputCUrl));
-
-        std::unique_ptr<Sgemm::Sgemm> sgemm( 
-            device == Knobs::DEVICE::GPU ?
-            static_cast<Sgemm::Sgemm*>(new Sgemm::SgemmCuda(1,1,a,b,c,gpuTileSize)) :
-            static_cast<Sgemm::Sgemm*>(new Sgemm::SgemmCpu(1,1,a,b,c,cpuThreads,cpuTileSize))
-        );
-        stopTime = std::chrono::system_clock::now();
-        duration = std::chrono::duration<double, std::milli>((stopTime - startTime));
-        if(device == Knobs::DEVICE::GPU){
-            Sgemm::SgemmCuda* ptr(dynamic_cast<Sgemm::SgemmCuda*>(sgemm.get()));
-            double dataUploadTime = ptr->getDataUploadTime();
-            double windUpTime = duration.count() - dataUploadTime;
-            std::cout << "WIND UP,CPU," << windUpTime << "\n";
-            std::cout << "UPLOAD,GPU," << dataUploadTime << "\n";
-        }else{
-            std::cout << "WIND UP,CPU," << duration.count() << "\n";
-        }
-        //STOP: WIND UP
-
-
         //START: KERNEL
         double kernelTotalDuration = 0;
         unsigned times = vm["times"].as<unsigned>();
@@ -169,43 +168,43 @@ int main(int argc, char *argv[])
             std::cout << "KERNEL,CPU," << kernelTotalDuration << "\n";
         }
         //STOP: KERNEL
-
-        //START: WIND DOWN
-        startTime = std::chrono::system_clock::now();
-        Sgemm::Matrix res(sgemm->getResult());
-        if(vm.count("output-file")){
-            Sgemm::WriteMatrixFile(vm["output-file"].as<std::string>(), res);
-        }
-        stopTime = std::chrono::system_clock::now();
-        duration = std::chrono::duration<double, std::milli>((stopTime - startTime));
-        if(device == Knobs::DEVICE::GPU){
-            Sgemm::SgemmCuda* ptr(dynamic_cast<Sgemm::SgemmCuda*>(sgemm.get()));
-            double dataDownloadTime = ptr->getDataDownloadTime();
-            double windDownTime = duration.count() - dataDownloadTime;
-            std::cout << "DOWNLOAD,GPU," << dataDownloadTime << "\n";
-            std::cout << "WIND DOWN,CPU," << windDownTime << "\n";
-        }else{
-            std::cout << "WIND DOWN,CPU," << duration.count() << "\n";
-        }
-        //START: WIND DOWN
-
-        //Add tick
-        //START: CONTROLLER PUSH
-        startTime = std::chrono::system_clock::now();
-        autosleep(data, targetThroughput);
-        error = binarySemaphoreWait(dataSemId);
-        addTick(data, 1);
-        error = binarySemaphorePost(dataSemId);
-        stopTime = std::chrono::system_clock::now();
-        duration = std::chrono::duration<double, std::milli>((stopTime - startTime));
-        std::cout << "CONTROLLER PUSH,CPU," << duration.count() << "\n";
-        //STOP: CONTROLLER PUSH
-        
-        //STOP: LOOP
-        stopLoop = std::chrono::system_clock::now();
-        duration = std::chrono::duration<double, std::milli>((stopLoop - startLoop));
-        std::cout << "LOOP,NONE," << duration.count() << "\n";
     }
+
+    //START: WIND DOWN
+    startTime = std::chrono::system_clock::now();
+    Sgemm::Matrix res(sgemm->getResult());
+    if(vm.count("output-file")){
+        Sgemm::WriteMatrixFile(vm["output-file"].as<std::string>(), res);
+    }
+    stopTime = std::chrono::system_clock::now();
+    duration = std::chrono::duration<double, std::milli>((stopTime - startTime));
+    if(device == Knobs::DEVICE::GPU){
+        Sgemm::SgemmCuda* ptr(dynamic_cast<Sgemm::SgemmCuda*>(sgemm.get()));
+        double dataDownloadTime = ptr->getDataDownloadTime();
+        double windDownTime = duration.count() - dataDownloadTime;
+        std::cout << "DOWNLOAD,GPU," << dataDownloadTime << "\n";
+        std::cout << "WIND DOWN,CPU," << windDownTime << "\n";
+    }else{
+        std::cout << "WIND DOWN,CPU," << duration.count() << "\n";
+    }
+    //START: WIND DOWN
+
+    //Add tick
+    //START: CONTROLLER PUSH
+    startTime = std::chrono::system_clock::now();
+    autosleep(data, targetThroughput);
+    error = binarySemaphoreWait(dataSemId);
+    addTick(data, 1);
+    error = binarySemaphorePost(dataSemId);
+    stopTime = std::chrono::system_clock::now();
+    duration = std::chrono::duration<double, std::milli>((stopTime - startTime));
+    std::cout << "CONTROLLER PUSH,CPU," << duration.count() << "\n";
+    //STOP: CONTROLLER PUSH
+    
+    //STOP: LOOP
+    stopLoop = std::chrono::system_clock::now();
+    duration = std::chrono::duration<double, std::milli>((stopLoop - startLoop));
+    std::cout << "LOOP,NONE," << duration.count() << "\n";
     
     std::cout << std::endl;
     registerDetach(data);
