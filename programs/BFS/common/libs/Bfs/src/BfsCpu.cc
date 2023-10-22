@@ -20,26 +20,28 @@ namespace Bfs
 
     const std::vector<int>& BfsCpu::getResult() { return costs_; }
 
-    bool BfsCpu::run() 
+    void BfsCpu::run() 
     {
-        bool done = true;
-        #pragma omp parallel for \
-        num_threads(nThreads_)
-        for(int fromNode = 0; fromNode < graph.nVertices; fromNode++){
-            if (costs_[fromNode] == currentCost){
-                const int nodeEdgesStart = graph.edgeOffsets[fromNode];
-                const int nodeEdgesStop = graph.edgeOffsets[fromNode+1];
-                for(int edgeId = nodeEdgesStart; edgeId < nodeEdgesStop; edgeId++){
-                    const int toNode = graph.edges[edgeId];
-                    if(costs_[toNode] == -1){
-                        costs_[toNode]=currentCost+1;
-                        done=false;
+
+        bool done = false;
+        while(!done){
+            done=true;
+            #pragma omp parallel for \
+            num_threads(nThreads_)
+            for(int fromNode = 0; fromNode < graph.nVertices; fromNode++){
+                if (costs_[fromNode] == currentCost){
+                    const int nodeEdgesStart = graph.edgeOffsets[fromNode];
+                    const int nodeEdgesStop = graph.edgeOffsets[fromNode+1];
+                    for(int edgeId = nodeEdgesStart; edgeId < nodeEdgesStop; edgeId++){
+                        const int toNode = graph.edges[edgeId];
+                        if(costs_[toNode] == -1){
+                            costs_[toNode]=currentCost+1;
+                            done=false;
+                        }
                     }
                 }
             }
+            currentCost++;
         }
-
-        currentCost++;
-        return done;
     }
 }

@@ -24,9 +24,13 @@ namespace Bfs
             );
             virtual ~BfsCuda() override;
 
-            virtual bool run() override;
+            virtual void run() override;
             virtual const std::vector<int>& getResult() override;
 
+            float getDataUploadTime() { return dataUploadTime; }
+            float getKernelTime() { return kernelTotalTime; }
+            float getDataDownloadTime() { return dataDownloadTime; }
+            
         private:
             unsigned int blockSize_;
             unsigned int chunkFactor_; 
@@ -41,6 +45,10 @@ namespace Bfs
             bool* doneDevice_;
 
             std::vector<int> costsHost_;
+
+            float dataUploadTime = 0;
+            float kernelTotalTime = 0;
+            float dataDownloadTime = 0;
     };
 }
 

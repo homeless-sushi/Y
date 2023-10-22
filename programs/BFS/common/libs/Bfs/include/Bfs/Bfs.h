@@ -16,7 +16,7 @@ namespace Bfs
 
             Bfs(Graph::Graph& graph, unsigned int source);
             virtual ~Bfs();
-            virtual bool run() = 0;
+            virtual void run() = 0;
             virtual const std::vector<int>& getResult() = 0;
     };
  }
