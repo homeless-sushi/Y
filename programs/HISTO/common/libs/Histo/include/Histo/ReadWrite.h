@@ -12,6 +12,12 @@ namespace Histo
         std::vector<unsigned short>& rgb
     );
 
+    void ReadBinaryDataFile(
+        const std::string& fileURL,
+        unsigned& imgWidth, unsigned& imgHeight,
+        std::vector<unsigned short>& rgb
+    );
+
     void WriteHistogramFile(
         const std::string fileURL,
         const std::vector<unsigned>& histo

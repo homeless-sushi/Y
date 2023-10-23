@@ -30,7 +30,7 @@ int main(int argc, char *argv[])
     unsigned imgWidth, imgHeight;
     unsigned histoWidth, histoHeight;
     std::vector<unsigned short> rgb;
-    Histo::ReadDataFile(
+    Histo::ReadBinaryDataFile(
         inputFileURL,
         imgWidth, imgHeight,
         rgb

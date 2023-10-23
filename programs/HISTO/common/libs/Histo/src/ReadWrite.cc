@@ -14,7 +14,7 @@ namespace Histo
         unsigned& imgWidth, unsigned& imgHeight,
         std::vector<unsigned short>& rgb
     )
-    {
+    {       
         std::ifstream inFile(fileURL);
         if (!inFile.is_open()){
             throw std::runtime_error("Cannot open file: " + fileURL);
@@ -42,6 +42,26 @@ namespace Histo
                 rgb.push_back(data);
             }
         }
+    };
+
+    void ReadBinaryDataFile(
+        const std::string& fileURL,
+        unsigned& imgWidth, unsigned& imgHeight,
+        std::vector<unsigned short>& rgb
+    )
+    {
+        std::ifstream inFile(fileURL, std::ios::binary);
+        if (!inFile.is_open()){
+            throw std::runtime_error("Cannot open file: " + fileURL);
+        }
+
+        inFile.read(reinterpret_cast<char*>(&imgWidth), sizeof(unsigned));
+        inFile.read(reinterpret_cast<char*>(&imgHeight), sizeof(unsigned));
+
+        const unsigned n = imgWidth * imgHeight * N_CHANNELS;
+
+        rgb.resize(n);
+        inFile.read(reinterpret_cast<char*>(rgb.data()), n * sizeof(unsigned short));
     };
         
     void WriteHistogramFile(

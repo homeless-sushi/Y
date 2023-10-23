@@ -1,5 +1,6 @@
 import argparse
 import random
+import struct
 import sys
 
 def setup_args() :
@@ -7,7 +8,7 @@ def setup_args() :
     parser = argparse.ArgumentParser(
         prog='Data Generator',
         description=
-            'This program produces a input of height Y and width Y\n\n',
+            'This program produces a input of height Y and width X\n\n',
         usage=f'{sys.argv[0]} '
         'X Y '
         '--output-file OUTPUT_URL'
@@ -34,6 +35,9 @@ def setup_args() :
 
     return parser
 
+def generate_random_numbers(X):
+    return [(random.randint(0, 255)) for _ in range(3*X)]
+
 def generate_random_line_x(X):
     return ' '.join(str(random.randint(0, 255)) for _ in range(3*X))
 
@@ -48,9 +52,13 @@ def main():
     height = args.y
     output_url = args.output_file
 
-    with open(output_url, "w") as output_file :
-        output_file.write(f"{width} {height}\n")
-        output_file.write(generate_y_random_lines(width, height))
+    with open(output_url, "wb") as output_file :
+        output_file.write(struct.pack('II', width, height))
+
+        # Generate and write pixel data
+        for _ in range(height):
+            pixel_data = generate_random_numbers(width)
+            output_file.write(struct.pack(f'{width*3}H', *pixel_data))
 
     return 0
 
