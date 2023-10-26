@@ -64,8 +64,8 @@ int main(int argc, char *argv[])
     struct app_data* data = registerAttach(
         vm["instance-name"].as<std::string>().c_str(),
         targetThroughput,
-        4,
-        true);
+        1,
+        false);
     int dataSemId = semget(getpid(), 1, 0);
 
     unsigned int deviceId = 0;
@@ -75,7 +75,7 @@ int main(int argc, char *argv[])
     Knobs::GpuKnobs::BLOCK_SIZE gpuBlockSize;
 
     unsigned int cpuThreads = 1;
-    unsigned int precision = vm["precision"].as<unsigned int>();
+    unsigned int precision = 1;
 
     CastKnobs(
         gpuBlockSizeExp,
@@ -158,7 +158,6 @@ int main(int argc, char *argv[])
         //START: KERNEL
         startTime = std::chrono::system_clock::now();
         cutcp->run();
-        stopTime = std::chrono::system_clock::now();
         if(device == Knobs::DEVICE::GPU){
             CutcpCuda::CutcpCuda* ptr(dynamic_cast<CutcpCuda::CutcpCuda*>(cutcp.get()));
             std::cout << "KERNEL,GPU," << ptr->getKernelTime() << "\n";
@@ -215,14 +214,10 @@ po::options_description SetupOptions()
     po::options_description desc("Allowed options");
     desc.add_options()
     ("help", "Display help message")
-
     ("input-file,I", po::value<std::string>(), "input atoms file")
     ("output-file,O", po::value<std::string>(), "output lattice result file")
-
     ("instance-name", po::value<std::string>()->default_value("CUTCP"), "name of benchmark instance")
     ("target-throughput", po::value<long double>()->default_value(1.0), "target throughput for the kernel")
-
-    ("precision,P", po::value<unsigned int>()->default_value(100), "precision in range 0-100")
     ;
 
     return desc;
