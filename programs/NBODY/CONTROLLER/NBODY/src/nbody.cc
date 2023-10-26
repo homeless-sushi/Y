@@ -72,7 +72,7 @@ int main(int argc, char *argv[])
     Knobs::GpuKnobs::BLOCK_SIZE gpuBlockSize;
 
     unsigned int cpuThreads = 1;
-    unsigned int precision = 100;
+    unsigned int precision = vm["precision"].as<unsigned int>();
 
     CastKnobs(
         gpuBlockSizeExp,
