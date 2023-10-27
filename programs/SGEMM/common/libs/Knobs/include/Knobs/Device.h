@@ -43,6 +43,9 @@ namespace Knobs
 
             GpuKnobs(TILE_SIZE tileSize);
     };
+
+    unsigned int GetCpuTileSizeFromExponent(unsigned int exp);
+    GpuKnobs::TILE_SIZE GetGpuTileSizeFromExponent(unsigned int exp);
 }
 
 #endif //SGEMM_KNOBS_DEVICE

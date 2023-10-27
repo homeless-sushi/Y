@@ -35,4 +35,15 @@ namespace Knobs
         tileSize{tileSize},
         DeviceKnobs(DEVICE::GPU) 
     {};
+
+    unsigned int GetCpuTileSizeFromExponent(unsigned int exp)
+    {
+        return 8 << exp;
+    };
+    GpuKnobs::TILE_SIZE GetGpuTileSizeFromExponent(unsigned int exp)
+    {
+        return static_cast<Knobs::GpuKnobs::TILE_SIZE>(
+            static_cast<unsigned int>(Knobs::GpuKnobs::TILE_8) << exp
+        );
+    };
 }

@@ -250,8 +250,6 @@ void CastKnobs(
     Knobs::GpuKnobs::TILE_SIZE& gpuTileSize
 )
 {
-    cpuTileSize = 16 << cpuTileSizeExp;
-    gpuTileSize = static_cast<Knobs::GpuKnobs::TILE_SIZE>(
-        Knobs::GpuKnobs::TILE_8 << gpuTileSizeExp
-    );
+    cpuTileSize = Knobs::GetCpuTileSizeFromExponent(cpuTileSizeExp);
+    gpuTileSize = Knobs::GetGpuTileSizeFromExponent(gpuTileSizeExp);
 }
