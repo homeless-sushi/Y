@@ -22,10 +22,12 @@ namespace Dummy
     {
         CudaErrorCheck(cudaMalloc(&gpu_in, sizeof(float)*data.size()));
         CudaErrorCheck(cudaMalloc(&gpu_out, sizeof(float)*data.size()));
+#ifdef TIMERS
         cudaEvent_t start, stop;
         cudaEventCreate(&start);
         cudaEventCreate(&stop);
         cudaEventRecord(start);
+#endif //TIMERS
         cudaMemcpy(
             gpu_in,
             data.data(),
@@ -33,11 +35,13 @@ namespace Dummy
             cudaMemcpyHostToDevice
         );
         cudaMemset(gpu_out, 0, sizeof(float)*data.size());
+#ifdef TIMERS
         cudaEventRecord(stop);
         cudaEventSynchronize(stop);
         cudaEventElapsedTime(&dataUploadTime, start, stop);
         cudaEventDestroy(start);
         cudaEventDestroy(stop);
+#endif //TIMERS
     };
 
     Dummy::~Dummy()
@@ -48,21 +52,25 @@ namespace Dummy
 
     std::vector<float> Dummy::getResult()
     {
+#ifdef TIMERS
         cudaEvent_t start, stop;
         cudaEventCreate(&start);
         cudaEventCreate(&stop);
         cudaEventRecord(start);
+#endif //TIMERS
         cudaMemcpy(
             data.data(),
             gpu_out,
             sizeof(float)*data.size(),
             cudaMemcpyDeviceToHost
         );
+#ifdef TIMERS
         cudaEventRecord(stop);
         cudaEventSynchronize(stop);
         cudaEventElapsedTime(&dataDownloadTime, start, stop);
         cudaEventDestroy(start);
         cudaEventDestroy(stop);
+#endif //TIMERS
         return data;
     }
 
@@ -100,29 +108,41 @@ namespace Dummy
 
     void Dummy::run()
     {
+#ifdef TIMERS
         cudaEvent_t start, stop;
         cudaEventCreate(&start);
         cudaEventCreate(&stop);
         cudaEventRecord(start);
+#endif //TIMERS
         dummyKernel<<<gridLen, blockLen>>>(gpu_in, gpu_out, data.size(), times);
+#ifdef TIMERS
         cudaEventRecord(stop);
         cudaDeviceSynchronize();
         cudaEventElapsedTime(&kernelTime, start, stop);
         cudaEventDestroy(start);
         cudaEventDestroy(stop);
+#else
+        cudaDeviceSynchronize();
+#endif //TIMERS
     };
 
     void Dummy::runInfinite()
     {
+#ifdef TIMERS
         cudaEvent_t start, stop;
         cudaEventCreate(&start);
         cudaEventCreate(&stop);
         cudaEventRecord(start);
+#endif //TIMERS
         dummyInfinteKernel<<<gridLen, blockLen>>>(gpu_in, gpu_out, data.size());
+#ifdef TIMERS
         cudaEventRecord(stop);
         cudaDeviceSynchronize();
         cudaEventElapsedTime(&kernelTime, start, stop);
         cudaEventDestroy(start);
         cudaEventDestroy(stop);
+#else
+        cudaDeviceSynchronize();
+#endif //TIMERS
     };
 }

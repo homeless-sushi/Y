@@ -62,17 +62,21 @@ namespace CutcpCuda
 
         CudaErrorCheck(cudaMalloc(&atomsValues, sizeof(Atom::Atom)*atomsValuesHost.size()));
         CudaErrorCheck(cudaMalloc(&cellIndexes, sizeof(long)*cellIndexesHost.size()));
+#ifdef TIMERS
         cudaEvent_t start, stop;
         cudaEventCreate(&start);
         cudaEventCreate(&stop);
         cudaEventRecord(start);
+#endif //TIMERS
         cudaMemcpy(atomsValues, atomsValuesHost.data(), sizeof(Atom::Atom)*atomsValuesHost.size(), cudaMemcpyHostToDevice);
         cudaMemcpy(cellIndexes, cellIndexesHost.data(), sizeof(long)*cellIndexesHost.size(), cudaMemcpyHostToDevice);
+#ifdef TIMERS
         cudaEventRecord(stop);
         cudaEventSynchronize(stop);
         cudaEventElapsedTime(&dataUploadTime, start, stop);
         cudaEventDestroy(start);
         cudaEventDestroy(stop);
+#endif //TIMERS
     };
 
     AtomsCrs::AtomsCrs(const AtomsCrs& owner) :
@@ -159,21 +163,25 @@ namespace CutcpCuda
     CutcpCuda::~CutcpCuda(){};
 
     Lattice::Lattice CutcpCuda::getResult(){
+#ifdef TIMERS
         cudaEvent_t start, stop;
         cudaEventCreate(&start);
         cudaEventCreate(&stop);
         cudaEventRecord(start);
+#endif //TIMERS
         cudaMemcpy(
             lattice.points.data(),
             latticeCuda.points,
             sizeof(float)*lattice.points.size(),
             cudaMemcpyDeviceToHost
         );
+#ifdef TIMERS
         cudaEventRecord(stop);
         cudaEventSynchronize(stop);
         cudaEventElapsedTime(&dataDownloadTime, start, stop);
         cudaEventDestroy(start);
         cudaEventDestroy(stop);
+#endif //TIMERS
         return lattice;
     };
     
@@ -328,10 +336,12 @@ namespace CutcpCuda
         cudaDeviceProp deviceProp;
         CudaErrorCheck(cudaGetDeviceProperties(&deviceProp, 0));
         unsigned int smCount = deviceProp.multiProcessorCount;
+#ifdef TIMERS
         cudaEvent_t start, stop;
         cudaEventCreate(&start);
         cudaEventCreate(&stop);
         cudaEventRecord(start);
+#endif //TIMERS
         cutoffPotential<<<smCount,blockSize,blockSize*sizeof(float)>>>(
             atomCrs,
             latticeCuda,
@@ -342,10 +352,14 @@ namespace CutcpCuda
             latticeCuda,
             exclusionCutoff
         );
+#ifdef TIMERS
         cudaEventRecord(stop);
         cudaDeviceSynchronize();
         cudaEventElapsedTime(&kernelTime, start, stop);
         cudaEventDestroy(start);
         cudaEventDestroy(stop);
+#else
+        cudaDeviceSynchronize();
+#endif //TIMERS
     };
 }

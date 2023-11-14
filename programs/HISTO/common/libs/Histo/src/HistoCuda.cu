@@ -22,18 +22,22 @@ namespace Histo
         cudaMalloc(&histo_partial_device, histo.size()*nBlocks*sizeof(unsigned));
         cudaMalloc(&histo_final_device, histo.size()*sizeof(unsigned));
 
+#ifdef TIMERS
         cudaEvent_t start, stop;
         cudaEventCreate(&start);
         cudaEventCreate(&stop);
         cudaEventRecord(start);
+#endif //TIMERS
         cudaMemcpy(rgb_device, rgb.data(), rgb.size()*sizeof(unsigned short), cudaMemcpyHostToDevice);
         cudaMemset(histo_partial_device, 0, histo.size()*nBlocks*sizeof(unsigned));
         cudaMemset(histo_final_device, 0, histo.size()*sizeof(unsigned));
+#ifdef TIMERS
         cudaEventRecord(stop);
         cudaEventSynchronize(stop);
         cudaEventElapsedTime(&dataUploadTime, start, stop);
         cudaEventDestroy(start);
         cudaEventDestroy(stop);
+#endif //TIMERS
     };
 
     __global__
@@ -94,32 +98,42 @@ namespace Histo
 
     void HistoCuda::run()
     {
+#ifdef TIMERS
         cudaEvent_t start, stop;
         cudaEventCreate(&start);
         cudaEventCreate(&stop);
         cudaEventRecord(start);
+#endif //TIMERS
         histogram_partial<<<nBlocks, blockSize>>>(rgb_device, rgb.size(), histo_partial_device);
         unsigned nBlocksFinal = (N_CHANNELS*N_CHANNEL_VALUES + blockSize - 1)/blockSize;
         histogram_final<<<nBlocksFinal, blockSize>>>(histo_partial_device, nBlocks, histo_final_device);
+#ifdef TIMERS
         cudaEventRecord(stop);
         cudaDeviceSynchronize();
         cudaEventElapsedTime(&kernelTime, start, stop);
         cudaEventDestroy(start);
         cudaEventDestroy(stop);
+#else
+        cudaDeviceSynchronize();
+#endif //TIMERS
     };
 
     std::vector<unsigned> HistoCuda::getResult()
     {
+#ifdef TIMERS
         cudaEvent_t start, stop;
         cudaEventCreate(&start);
         cudaEventCreate(&stop);
         cudaEventRecord(start);
+#endif //TIMERS
         cudaMemcpy(histo.data(), histo_final_device, histo.size()*sizeof(unsigned), cudaMemcpyDeviceToHost);
+#ifdef TIMERS
         cudaEventRecord(stop);
         cudaEventSynchronize(stop);
         cudaEventElapsedTime(&dataDownloadTime, start, stop);
         cudaEventDestroy(start);
         cudaEventDestroy(stop);
+#endif //TIMERS
         return histo;
     };
 

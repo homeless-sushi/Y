@@ -58,22 +58,25 @@ namespace NbodyCuda
         CudaErrorCheck(cudaMalloc(&vy, sizeof(float)*n));
         CudaErrorCheck(cudaMalloc(&vz, sizeof(float)*n));
 
+#ifdef TIMERS
         cudaEvent_t start, stop;
         cudaEventCreate(&start);
         cudaEventCreate(&stop);
         cudaEventRecord(start);
+#endif //TIMERS
         cudaMemcpy(x, tmp_x, sizeof(float)*n, cudaMemcpyHostToDevice);
         cudaMemcpy(y, tmp_y, sizeof(float)*n, cudaMemcpyHostToDevice);
         cudaMemcpy(z, tmp_z, sizeof(float)*n, cudaMemcpyHostToDevice);
         cudaMemcpy(vx, tmp_vx, sizeof(float)*n, cudaMemcpyHostToDevice);
         cudaMemcpy(vy, tmp_vy, sizeof(float)*n, cudaMemcpyHostToDevice);
         cudaMemcpy(vz, tmp_vz, sizeof(float)*n, cudaMemcpyHostToDevice);
+#ifdef TIMERS
         cudaEventRecord(stop);
         cudaEventSynchronize(stop);
         cudaEventElapsedTime(&dataUploadTime, start, stop);
         cudaEventDestroy(start);
         cudaEventDestroy(stop);
-
+#endif //TIMERS
         free(tmp_x);
         free(tmp_y);
         free(tmp_z);
@@ -120,21 +123,25 @@ namespace NbodyCuda
         float* const tmp_vy = (float*) malloc(sizeof(float)*n);
         float* const tmp_vz = (float*) malloc(sizeof(float)*n);
 
+#ifdef TIMERS
         cudaEvent_t start, stop;
         cudaEventCreate(&start);
         cudaEventCreate(&stop);
         cudaEventRecord(start);
+#endif //TIMERS
         cudaMemcpy(tmp_x, x, sizeof(float)*n, cudaMemcpyDeviceToHost);
         cudaMemcpy(tmp_y, y, sizeof(float)*n, cudaMemcpyDeviceToHost);
         cudaMemcpy(tmp_z, z, sizeof(float)*n, cudaMemcpyDeviceToHost);
         cudaMemcpy(tmp_vx, vx, sizeof(float)*n, cudaMemcpyDeviceToHost);
         cudaMemcpy(tmp_vy, vy, sizeof(float)*n, cudaMemcpyDeviceToHost);
         cudaMemcpy(tmp_vz, vz, sizeof(float)*n, cudaMemcpyDeviceToHost);
+#ifdef TIMERS
         cudaEventRecord(stop);
         cudaEventSynchronize(stop);
         cudaEventElapsedTime(&dataDownloadTime, start, stop);
         cudaEventDestroy(start);
         cudaEventDestroy(stop);
+#endif //TIMERS
    
         std::vector<::Nbody::Body> bodies;
         bodies.reserve(n);
@@ -246,11 +253,14 @@ namespace NbodyCuda
         const unsigned int gridDim_x = (n + blockDim_x - 1) / blockDim_x;
 
         for (float t = 0; t < simulationTime; t+=timeStep){
+#ifdef TIMERS
             cudaEvent_t start, stop;
             cudaEventCreate(&start);
             cudaEventCreate(&stop);
             cudaEventRecord(start);
+#endif //TIMERS
             kernel<<<gridDim_x, blockDim_x, blockDim_x*sizeof(float)*3>>>(in, out, timeStep, n);
+#ifdef TIMERS
             cudaEventRecord(stop);
             cudaDeviceSynchronize();
             float kernelTime;
@@ -258,6 +268,9 @@ namespace NbodyCuda
             kernelTotalTime+=kernelTime;
             cudaEventDestroy(start);
             cudaEventDestroy(stop);
+#else
+            cudaDeviceSynchronize();
+#endif //TIMERS
             in.swap(out);
         }
 

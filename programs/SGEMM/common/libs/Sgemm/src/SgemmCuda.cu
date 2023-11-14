@@ -86,10 +86,12 @@ namespace Sgemm
         CudaErrorCheck(cudaMalloc(&aDevice_, sizeof(float)*a_.nrows()*a_.ncols()));
         CudaErrorCheck(cudaMalloc(&bDevice_, sizeof(float)*b_.nrows()*b_.ncols()));
         CudaErrorCheck(cudaMalloc(&cDevice_, sizeof(float)*c_.nrows()*c_.ncols()));
+#ifdef TIMERS
         cudaEvent_t start, stop;
         cudaEventCreate(&start);
         cudaEventCreate(&stop);
         cudaEventRecord(start);
+#endif //TIMERS
         CudaErrorCheck(cudaMemcpy(
             aDevice_,
             a_.data(),
@@ -108,11 +110,13 @@ namespace Sgemm
             sizeof(float)*c_.nrows()*c_.ncols(),
             cudaMemcpyKind::cudaMemcpyHostToDevice
         ));
+#ifdef TIMERS
         cudaEventRecord(stop);
         cudaDeviceSynchronize();
         cudaEventElapsedTime(&dataUploadTime, start, stop);
         cudaEventDestroy(start);
         cudaEventDestroy(stop);
+#endif //TIMERS
     }
 
     SgemmCuda::~SgemmCuda()
@@ -128,10 +132,12 @@ namespace Sgemm
     void SgemmCuda::run(){
         dim3 grid(c_.nrows()/tileSize_, c_.ncols()/tileSize_);
         dim3 block(tileSize_,tileSize_);
+#ifdef TIMERS
         cudaEvent_t start, stop;
         cudaEventCreate(&start);
         cudaEventCreate(&stop);
         cudaEventRecord(start);
+#endif //TIMERS
         kernel<<<grid, block, sizeof(float)*tileSize_*tileSize_>>>(
             alpha_,
             beta_,
@@ -143,31 +149,39 @@ namespace Sgemm
             c_.nrows(),
             tileSize_
         );
+#ifdef TIMERS
         CudaKernelErrorCheck();
         cudaEventRecord(stop);
         cudaDeviceSynchronize();
         cudaEventElapsedTime(&kernelTime, start, stop);
         cudaEventDestroy(start);
         cudaEventDestroy(stop);
+#else
+        cudaDeviceSynchronize();
+#endif //TIMERS
     }
 
     Matrix SgemmCuda::getResult(){
         float* resData_ = (float*) malloc(sizeof(float)*c_.nrows()*c_.ncols());
+#ifdef TIMERS
         cudaEvent_t start, stop;
         cudaEventCreate(&start);
         cudaEventCreate(&stop);
         cudaEventRecord(start);
+#endif //TIMERS
         CudaErrorCheck(cudaMemcpy(
             resData_,
             cDevice_,
             sizeof(float)*c_.nrows()*c_.ncols(),
             cudaMemcpyKind::cudaMemcpyDeviceToHost
         ));
+#ifdef TIMERS
         cudaEventRecord(stop);
         cudaDeviceSynchronize();
         cudaEventElapsedTime(&dataDownloadTime, start, stop);
         cudaEventDestroy(start);
         cudaEventDestroy(stop);
+#endif //TIMERS
         Matrix res(c_.nrows(), c_.ncols(), resData_);
         return res;
     }

@@ -98,10 +98,12 @@ namespace Bfs
         CudaErrorCheck(
             cudaMalloc(&edgesDevice_, sizeof(unsigned int)*graph.edges.size())
         );
+#ifdef TIMERS
         cudaEvent_t start, stop;
         cudaEventCreate(&start);
         cudaEventCreate(&stop);
         cudaEventRecord(start);
+#endif //TIMERS
         cudaMemcpy(
             edgeOffsetsDevice_,
             graph.edgeOffsets.data(),
@@ -114,11 +116,13 @@ namespace Bfs
             sizeof(unsigned int)*graph.edges.size(),
             cudaMemcpyKind::cudaMemcpyHostToDevice
         );
+#ifdef TIMERS
         cudaEventRecord(stop);
         cudaEventSynchronize(stop);
         cudaEventElapsedTime(&dataUploadTime, start, stop);
         cudaEventDestroy(start);
         cudaEventDestroy(stop);
+#endif //TIMERS
         if(textureMemForEdgesOffsets_){
             memset(&edgeOffsetsTexture_, 0, sizeof(cudaTextureObject_t));
             createTextureObject(
@@ -168,10 +172,12 @@ namespace Bfs
         bool done = false;
         while(!done){
             cudaMemset(doneDevice_, true, sizeof(bool));
+#ifdef TIMERS
             cudaEvent_t start, stop;
             cudaEventCreate(&start);
             cudaEventCreate(&stop);
             cudaEventRecord(start);
+#endif //TIMERS
             kernel<<<gridSize, blockSize>>>(
                 graph.nVertices, 
                 chunkSize,
@@ -185,6 +191,7 @@ namespace Bfs
                 currentCost,
                 doneDevice_
             );
+#ifdef TIMERS
             cudaEventRecord(stop);
             cudaDeviceSynchronize();
             float kernelTime;
@@ -192,6 +199,9 @@ namespace Bfs
             kernelTotalTime+=kernelTime;
             cudaEventDestroy(start);
             cudaEventDestroy(stop);
+#else
+            cudaDeviceSynchronize();
+#endif //TIMERS
             cudaMemcpy(
                 &done,
                 doneDevice_,
@@ -206,21 +216,25 @@ namespace Bfs
     {
         costsHost_.reserve(graph.nVertices);
         costsHost_.resize(costsHost_.capacity());
+#ifdef TIMERS
         cudaEvent_t start, stop;
         cudaEventCreate(&start);
         cudaEventCreate(&stop);
         cudaEventRecord(start);
+#endif //TIMERS
         cudaMemcpy(
             costsHost_.data(),
             costsDevice_,
             sizeof(int)*graph.nVertices,
             cudaMemcpyKind::cudaMemcpyDeviceToHost
         );
+#ifdef TIMERS
         cudaEventRecord(stop);
         cudaEventSynchronize(stop);
         cudaEventElapsedTime(&dataDownloadTime, start, stop);
         cudaEventDestroy(start);
         cudaEventDestroy(stop);
+#endif //TIMERS
         return costsHost_;
     };
 }
