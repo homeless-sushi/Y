@@ -79,7 +79,7 @@ namespace Sgemm
 
     Matrix::~Matrix()
     {
-        delete[] data_;
+        free(data_);
     };
 
     void Matrix::transpose(){ 
@@ -91,7 +91,7 @@ namespace Sgemm
 
         std::swap(ncols_, nrows_);
         
-        delete[] data_;
+        free(data_);
         data_ = transposed_data;
     };
 }

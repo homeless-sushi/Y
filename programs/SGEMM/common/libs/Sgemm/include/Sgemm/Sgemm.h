@@ -21,6 +21,8 @@ namespace Sgemm
             virtual void run() = 0;
             virtual Matrix getResult() = 0;
 
+            virtual ~Sgemm() = default;
+
         protected:
             float alpha_;
             float beta_;
