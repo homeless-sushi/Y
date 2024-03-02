@@ -13,6 +13,8 @@ namespace Histo
 
             virtual std::vector<unsigned> getResult() = 0;
 
+            virtual ~Histo() = default;
+
         protected:
             std::vector<unsigned short> rgb;
             std::vector<unsigned> histo;
