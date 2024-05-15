@@ -1,0 +1,99 @@
+{
+	"name": "histo",
+	"version": "0.1",
+	"blocks":
+	[
+		{
+			"name": "histo",
+
+			"monitors":
+			[
+				{
+					"name": "time_monitor",
+					"type": "time",
+					"log": [ "average" ],
+					"constructor": [ "margot::TimeUnit::MILLISECONDS", 1 ]
+				}
+			],
+
+
+			"knobs":
+			[
+				{
+					"name": "GPU_N_BLOCKS_EXP",
+					"type": "unsigned int",
+					"values": [0,1,2,3,4,5]
+				},
+                {
+					"name": "GPU_BLOCK_SIZE_EXP",
+					"type": "unsigned int",
+					"values": [0,1,2,3,4,5]
+				}
+			],
+
+			"metrics":
+			[
+				{
+					"name": "TIME",
+					"type": "float",
+					"distribution": "yes",
+					"observed_by": "time_monitor",
+					"reactive_inertia": 3
+				}
+			],
+
+			"feature_distance":"euclidean",
+			"features":
+			[
+				{
+					"name": "INPUT_SIZE",
+					"type": "unsigned int",
+					"comparison": "-"
+				},
+                {
+					"name": "F_CPU",
+					"type": "unsigned int",
+					"comparison": "-"
+				},
+                {
+					"name": "F_GPU",
+					"type": "unsigned int",
+					"comparison": "-"
+				},
+				{
+					"name": "DEVICE_ID",
+					"type": "unsigned int",
+					"comparison": "-"
+				},
+				{
+					"name": "N_CORES",
+					"type": "unsigned int",
+					"comparison": "-"
+				}
+			],
+
+			"extra-functional_requirements":
+			[
+				{
+					"name":"fastest",
+					"minimize":
+					{
+						"geometric_mean":
+						[
+							{"TIME": 1}
+						]
+					},
+					"subject_to" : 
+					[
+						{
+							"subject" : "TIME",
+							"comparison" : "le",
+							"value" : 1000,
+							"confidence" : 1
+						}
+					]
+				}
+			]
+		}
+	]
+}
