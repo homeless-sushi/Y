@@ -88,7 +88,7 @@
 						{
 							"subject" : "TIME",
 							"comparison" : "le",
-							"value" : 1000,
+							"value" : 33.4,
 							"confidence" : 1
 						}
 					]
