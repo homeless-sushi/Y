@@ -1,0 +1,119 @@
+{
+	"name": "nbody",
+	"version": "1.0",
+	"blocks":
+	[
+		{
+			"name": "nbody",
+
+			"monitors":
+			[
+				{
+					"name": "time_monitor",
+					"type": "time",
+					"log": [ "average" ],
+					"constructor": [ "margot::TimeUnit::MILLISECONDS", 1 ]
+				},
+				{
+					"name" : "precision_monitor",
+					"type" : "float",
+					"log" : [ "average" ],
+					"constructor" : [ 1 ],
+					"stop" : [ { "precision" : "float" } ]
+				}
+			],
+
+			"knobs":
+			[
+				{
+					"name": "GPU_BLOCK_SIZE_EXP",
+					"type": "unsigned int",
+					"values": [0,1,2,3,4,5]
+				},
+				{
+					"name": "PRECISION_IN",
+					"type": "unsigned int",
+					"range": [1, 101, 10]
+				}
+			],
+
+			"metrics":
+			[
+				{
+					"name": "TIME",
+					"type": "float",
+					"distribution": "yes",
+					"observed_by": "time_monitor",
+					"reactive_inertia": 3
+				},
+				{
+					"name": "PRECISION_OUT",
+					"type": "float",
+					"distribution": "yes",
+					"observed_by": "precision_monitor",
+					"reactive_inertia": 3
+				}
+			],
+
+			"feature_distance":"euclidean",
+			"features":
+			[
+				{
+					"name": "INPUT_SIZE",
+					"type": "unsigned int",
+					"comparison": "-"
+				},
+                {
+					"name": "F_CPU",
+					"type": "unsigned int",
+					"comparison": "-"
+				},
+                {
+					"name": "F_GPU",
+					"type": "unsigned int",
+					"comparison": "-"
+				},
+				{
+					"name": "DEVICE_ID",
+					"type": "unsigned int",
+					"comparison": "-"
+				},
+				{
+					"name": "N_CORES",
+					"type": "unsigned int",
+					"comparison": "-"
+				}
+			],
+
+			"extra-functional_requirements":
+			[
+				{
+					"name":"max_precision",
+					"maximize":
+					{
+						"linear_mean":
+						[
+							{"PRECISION_OUT": 1},
+							{"TIME": -0.001}
+						]
+					},
+					"subject_to" : 
+					[
+						{
+							"subject" : "TIME",
+							"comparison" : "le",
+							"value" : 1000,
+							"confidence" : 1
+						},
+						{
+							"subject" : "PRECISION_OUT",
+							"comparison" : "ge",
+							"value" : 0,
+							"confidence" : 1
+						}
+					]
+				}
+			]
+		}
+	]
+}
